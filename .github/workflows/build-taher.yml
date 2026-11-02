@@ -60,8 +60,8 @@ jobs:
             echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/taher.keystore"
             export KEYSTORE="$RUNNER_TEMP/taher.keystore"
           else
-            echo "::warning::No persistent signing key: this is a one-off TEST APK, not upgrade-safe."
-            mkdir -p "$HOME/.android"
+            echo "::error::TAHER_KEYSTORE_B64 is missing. Refusing an APK with a different signing certificate."
+            exit 1
           fi
           HM_APP_VARIANT=taher HM_SKIP_WEB_BUILD=1 \
             VERSION_NAME="0.8.67-taher.2" VERSION_CODE=86702 android/build.sh
