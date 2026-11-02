@@ -42,14 +42,16 @@ jobs:
           KEYSTORE_B64: ${{ secrets.TAHER_KEYSTORE_B64 }}
         run: |
           set -euo pipefail
-          if [ -z "$KEYSTORE_B64" ]; then
-            echo "::error::Set TAHER_KEYSTORE_B64 to a persistent dedicated Hermes Taher keystore before building."
-            exit 1
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/taher.keystore"
+            export KEYSTORE="$RUNNER_TEMP/taher.keystore"
+          else
+            echo "::warning::No persistent signing key: this is a one-off TEST APK, not upgrade-safe."
+            mkdir -p "$HOME/.android"
           fi
-          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/taher.keystore"
-          HM_APP_VARIANT=taher HM_SKIP_WEB_BUILD=1 KEYSTORE="$RUNNER_TEMP/taher.keystore" \
+          HM_APP_VARIANT=taher HM_SKIP_WEB_BUILD=1 \
             VERSION_NAME="0.8.67-taher.1" VERSION_CODE=86701 android/build.sh
-          rm -f "$RUNNER_TEMP/taher.keystore"
+          if [ -n "${KEYSTORE:-}" ]; then rm -f "$KEYSTORE"; fi
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/build/hermes-mobile.apk | head -n 4
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs android/build/hermes-mobile.apk
       - uses: actions/upload-artifact@v4
