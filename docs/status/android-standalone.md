@@ -1,6 +1,10 @@
+# Hermes Mobile: Termux-based development checklist
+
+Decision (2026-11-02): Keep the existing Termux + Debian runtime. The user confirms it works well and does not require a standalone APK. Preserve this architecture; do not migrate or remove Termux unless explicitly requested later.
+
 # Hermes Android standalone: implementation checklist
 
-Goal: Run the Hermes agent runtime, memory, tools and optionally a local LLM within the Android app, without requiring an external Termux installation or remote server. Keep upstream attribution and MIT license.
+Updated goal: Improve reliability, security, battery usage, Android integration and optionally local AI inference while retaining Termux + Debian. Keep upstream attribution and MIT license.
 
 ## Progress
 - [x] Fork verified at tahershawki1/hermes-mobile-app; upstream LICENSE preserved.
@@ -9,11 +13,10 @@ Goal: Run the Hermes agent runtime, memory, tools and optionally a local LLM wit
 - [x] Identified direct Termux and Debian dependencies and pinned Hermes revision.
 - [ ] Audit complete runtime dependencies, native libraries, Android process constraints and license obligations (in progress: Debian image, supervisor and CI inspected).
 - [ ] Establish baseline CI and APK build result on development branch.
-- [ ] Build an isolated ARM64 Python/runtime feasibility prototype in the app sandbox.
-- [ ] Run Hermes CLI and plugin in the embedded runtime without Termux.
-- [ ] Replace Termux command bridge with an Android IPC/service bridge.
-- [ ] Integrate local LLM inference (GGUF/llama.cpp), measure RAM and latency.
-- [ ] Test file access, voice, notifications, lifecycle and offline behavior on real Android 17 hardware.
+- [ ] Audit the current Termux + Debian setup, restart behavior and error handling.
+- [ ] Improve reliability and battery use without breaking the existing supervisor.
+- [ ] Evaluate and integrate optional local LLM inference through the existing runtime; measure RAM and latency.
+- [ ] Test file access, voice, notifications, lifecycle and offline inference (if implemented) on real Android 17 hardware.
 - [ ] Security review, regression tests, signing and release candidate.
 
 ## Verified architecture observations
@@ -25,6 +28,7 @@ Goal: Run the Hermes agent runtime, memory, tools and optionally a local LLM wit
 - tools/check.sh and AGENTS.md require spec updates and tests for behavioral changes.
 
 ## Decisions and safeguards
+- The Termux + Debian dependency is intentional and accepted; no standalone-runtime migration is planned.
 - Do not modify main directly. Preserve upstream MIT copyright notices and third-party licenses.
 - Avoid hardcoded credentials, private phone data or signing keys in git.
 - Do not remove existing Termux path until embedded execution passes functional tests.
@@ -38,8 +42,9 @@ Goal: Run the Hermes agent runtime, memory, tools and optionally a local LLM wit
 - A rootfs archive may require significant storage: bootstrap.sh currently reserves 5200 MB for image restore. This is not the eventual APK size.
 
 ## Next action
-Finish native/Python dependency inventory; check baseline CI via PR or workflow execution; prototype a minimal ARM64 embedded runtime without changing the production launcher.
+Check baseline CI and APK build; audit the existing Termux/ Debian service lifecycle, restart behavior, battery impact and permissions. Do not prototype an embedded runtime.
 
 ## Verification log
 2026-11-02: GitHub connector successfully read the fork's README.md, LICENSE and AGENTS.md; created development branch. Read source files listed above. No APK build or device test has been executed in this workstream.
 2026-11-02: Reviewed tools/build-image.sh, phone/hermes-services and .github/workflows/ci.yml. Recorded image, supervisor and CI trigger limitations. No runtime compatibility claim or CI success asserted.
+2026-11-02: User confirmed the existing Termux-based implementation works and should be retained. Standalone migration tasks cancelled; focus shifted to maintenance, optimization, security and optional local inference.
