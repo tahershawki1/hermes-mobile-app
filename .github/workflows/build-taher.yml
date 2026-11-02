@@ -47,6 +47,7 @@ jobs:
           [ -f "$ANDROID_HOME/platforms/android-36/android.jar" ] && [ -x "$ANDROID_HOME/build-tools/35.0.0/aapt2" ] || \
             (yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0" >/dev/null)
       - name: Build production web UI
+        # Signing key is used only in the later APK step.
         working-directory: web
         run: |
           npm ci
