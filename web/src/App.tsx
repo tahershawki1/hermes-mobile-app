@@ -14,7 +14,7 @@ import { Scrubber, paintRail } from './components/Scrubber'
 import { SCRUB_MIN, railPosition, readLine, userMarks } from './scrub'
 import { TtsPlayer } from './components/TtsPlayer'
 import { Drawer } from './components/Drawer'
-import { RequestSheet } from './components/RequestSheet'
+import { InlineApproval, RequestSheet } from './components/RequestSheet'
 import { ChatMenuSheet, CommandsSheet, DraftMenuSheet, GoalSheet, ModelSheet, ContextSheet, RollbackSheet, SessionActionsSheet, StatusSheet, useCompress } from './components/Sheets'
 import { bannerItems, startActivityPolling } from './activity'
 import { DialogHost } from './dialog'
@@ -833,6 +833,7 @@ export function App() {
       <CompressHint />
       <TtsPlayer />
       <BgApp />
+      {request?.method === 'approval' && <InlineApproval key={request.id} req={request} />}
       <Composer injected={injected} onInjected={clearInjected} />
       {screen === 'skills' && <SkillsScreen onUse={t => setInjected(t)} />}
       {screen === 'memory' && <MemoryScreen />}
@@ -861,7 +862,7 @@ export function App() {
       {sheet === 'status' && <StatusSheet />}
       {sheet === 'rollback' && <RollbackSheet />}
       {sheet === 'context' && <ContextSheet />}
-      {request && <RequestSheet key={request.id} req={request} />}
+      {request && request.method !== 'approval' && <RequestSheet key={request.id} req={request} />}
       <UninstallResume />
       <CanvasPanel />
       <CanvasPull />
