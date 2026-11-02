@@ -1021,8 +1021,6 @@ export async function undoLast(): Promise<void> {
   }
 }
 
-const MAX_ATTACH_MB = 20
-
 function readDataUrl(file: File): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const fr = new FileReader()
@@ -1035,7 +1033,6 @@ function readDataUrl(file: File): Promise<string> {
 /** Queue a photo or file for the next message. Photos go to Hermes's image queue (it sees them); any other
  * file (PDF, text, spreadsheet…) is copied into the chat's workspace and referenced as @file: in the message. */
 export async function attachFile(file: File): Promise<void> {
-  if (file.size > MAX_ATTACH_MB * 1024 * 1024) throw new Error(`${file.name}: too large (max ${MAX_ATTACH_MB} MB)`)
   const a = await targetChat()
   const dataUrl = await readDataUrl(file)
   let att: Attachment
