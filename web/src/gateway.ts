@@ -1034,8 +1034,31 @@ function readDataUrl(file: File): Promise<string> {
  * file (PDF, text, spreadsheet…) is copied into the chat's workspace and referenced as @file: in the message. */
 export async function attachFile(file: File): Promise<void> {
   const a = await targetChat()
-  const dataUrl = await readDataUrl(file)
+  // Native builds stream small chunks through Android to Termux. Browser fallback keeps the original RPC path.
+  const nativeUpload = window.HermesAndroid?.uploadChunk && window.HermesAndroid?.finishUpload
+  const dataUrl = nativeUpload ? '' : await readDataUrl(file)
   let att: Attachment
+  if (nativeUpload) {
+    const id = 'hm' + Date.now().toString(36) + Math.random().toString(36).slice(2)
+    const size = 256 * 1024
+    for (let offset = 0; offset < file.size; offset += size) {
+      const part = await readDataUrl(new File([file.slice(offset, offset + size)], 'chunk'))
+      const answer = window.HermesAndroid!.uploadChunk!(id, offset, part.split(',')[1] || '')
+      if (answer !== 'ok') throw new Error('Upload failed: ' + answer)
+    }
+    const answer = window.HermesAndroid!.finishUpload!(id, file.name || 'file', file.size)
+    const uploaded = JSON.parse(answer) as { path?: string; error?: string }
+    if (!uploaded.path) throw new Error(uploaded.error || 'Upload failed')
+    if (file.type.startsWith('image/')) {
+      await rpc('image.attach', { session_id: a.runtimeId, path: uploaded.path })
+      att = { kind: 'image', name: file.name || 'image', path: uploaded.path, preview: URL.createObjectURL(file) }
+    } else {
+      att = { kind: 'file', name: file.name || 'file', path: uploaded.path, ref: '@file:' + uploaded.path }
+    }
+    const runtimeId = a.runtimeId
+    updateActive(x => (x.runtimeId === runtimeId ? { attachments: [...x.attachments, att] } : null))
+    return
+  }
   if (file.type.startsWith('image/')) {
     const r = await rpc<{ attached?: boolean; name?: string | null; path?: string | null; message?: string | null }>('image.attach_bytes', {
       session_id: a.runtimeId,
