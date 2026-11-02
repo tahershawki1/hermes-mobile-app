@@ -13,6 +13,7 @@ Updated goal: Improve reliability, security, battery usage, Android integration 
 - [x] Identified direct Termux and Debian dependencies and pinned Hermes revision.
 - [ ] Audit complete runtime dependencies, native libraries, Android process constraints and license obligations (in progress: Debian image, supervisor and CI inspected).
 - [x] Configure CI to trigger on development pushes (verified workflow file change).
+- [x] Create draft PR #1 to trigger existing CI matrix without merging.
 - [ ] Verify actual CI run results and APK build on development branch.
 - [ ] Audit the current Termux + Debian setup, restart behavior and error handling.
 - [ ] Improve reliability and battery use without breaking the existing supervisor.
@@ -51,3 +52,5 @@ Check baseline CI and APK build; audit the existing Termux/ Debian service lifec
 2026-11-02: User confirmed the existing Termux-based implementation works and should be retained. Standalone migration tasks cancelled; focus shifted to maintenance, optimization, security and optional local inference.
 
 2026-11-02: CI workflow push trigger changed from [main] to [main, development] on development branch, commit 684b9185. Fetched workflow again to verify the change. No workflow success or APK artifact has been confirmed. Reviewed phone/hermes-debian and phone/hermes-services for service lifecycle audit.
+
+2026-11-02: Opened draft PR #1 (development -> main) to request full CI checks. The commit workflow-runs lookup returned an empty list at check time, so no build/test pass is confirmed. PR intentionally left unmerged.
