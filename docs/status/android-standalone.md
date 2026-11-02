@@ -12,7 +12,8 @@ Updated goal: Improve reliability, security, battery usage, Android integration 
 - [x] Initial inspection of phone/bootstrap.sh, phone/install.sh, android/AndroidManifest.xml, android/build.sh, hermes/README.md, AGENTS.md and tools/check.sh.
 - [x] Identified direct Termux and Debian dependencies and pinned Hermes revision.
 - [ ] Audit complete runtime dependencies, native libraries, Android process constraints and license obligations (in progress: Debian image, supervisor and CI inspected).
-- [ ] Establish baseline CI and APK build result on development branch.
+- [x] Configure CI to trigger on development pushes (verified workflow file change).
+- [ ] Verify actual CI run results and APK build on development branch.
 - [ ] Audit the current Termux + Debian setup, restart behavior and error handling.
 - [ ] Improve reliability and battery use without breaking the existing supervisor.
 - [ ] Evaluate and integrate optional local LLM inference through the existing runtime; measure RAM and latency.
@@ -48,3 +49,5 @@ Check baseline CI and APK build; audit the existing Termux/ Debian service lifec
 2026-11-02: GitHub connector successfully read the fork's README.md, LICENSE and AGENTS.md; created development branch. Read source files listed above. No APK build or device test has been executed in this workstream.
 2026-11-02: Reviewed tools/build-image.sh, phone/hermes-services and .github/workflows/ci.yml. Recorded image, supervisor and CI trigger limitations. No runtime compatibility claim or CI success asserted.
 2026-11-02: User confirmed the existing Termux-based implementation works and should be retained. Standalone migration tasks cancelled; focus shifted to maintenance, optimization, security and optional local inference.
+
+2026-11-02: CI workflow push trigger changed from [main] to [main, development] on development branch, commit 684b9185. Fetched workflow again to verify the change. No workflow success or APK artifact has been confirmed. Reviewed phone/hermes-debian and phone/hermes-services for service lifecycle audit.
