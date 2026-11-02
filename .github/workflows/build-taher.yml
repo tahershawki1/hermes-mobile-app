@@ -46,12 +46,12 @@ jobs:
         run: |
           [ -f "$ANDROID_HOME/platforms/android-36/android.jar" ] && [ -x "$ANDROID_HOME/build-tools/35.0.0/aapt2" ] || \
             (yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0" >/dev/null)
-      - name: Build web UI (no signing key present)
+      - name: Build production web UI
         working-directory: web
         run: |
           npm ci
           npm run build
-      - name: Sign fork APK with persistent key
+      - name: Sign production APK with persistent key
         env:
           KEYSTORE_B64: ${{ secrets.TAHER_KEYSTORE_B64 }}
         run: |
@@ -60,11 +60,11 @@ jobs:
             echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/taher.keystore"
             export KEYSTORE="$RUNNER_TEMP/taher.keystore"
           else
-            echo "::warning::Persistent signing key unavailable: build a separate test package to preserve the installed app."
-            export HM_APP_VARIANT=taher-test
+            echo "::error::Production signing key TAHER_KEYSTORE_B64 missing. Refusing disposable signature."
+            exit 1
           fi
-          HM_APP_VARIANT="${HM_APP_VARIANT:-taher}" HM_SKIP_WEB_BUILD=1 \
-            VERSION_NAME="0.8.67-taher.2" VERSION_CODE=86702 android/build.sh
+          HM_APP_VARIANT=taher HM_SKIP_WEB_BUILD=1 \
+            VERSION_NAME="1.0.0" VERSION_CODE=100000 android/build.sh
           if [ -n "${KEYSTORE:-}" ]; then rm -f "$KEYSTORE"; fi
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/build/hermes-mobile.apk | head -n 4
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs android/build/hermes-mobile.apk
