@@ -64,7 +64,7 @@ jobs:
             mkdir -p "$HOME/.android"
           fi
           HM_APP_VARIANT=taher HM_SKIP_WEB_BUILD=1 \
-            VERSION_NAME="0.8.67-taher.1" VERSION_CODE=86701 android/build.sh
+            VERSION_NAME="0.8.67-taher.2" VERSION_CODE=86702 android/build.sh
           if [ -n "${KEYSTORE:-}" ]; then rm -f "$KEYSTORE"; fi
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/build/hermes-mobile.apk | head -n 4
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs android/build/hermes-mobile.apk
