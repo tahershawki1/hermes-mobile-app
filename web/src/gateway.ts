@@ -793,7 +793,12 @@ onChatOpen('access', ({ chat, kind }) => {
   // Hermes (b8a8be18) forgets a chat's YOLO when it is resumed: put it back (Auto access: the plugin's list first).
   const want = rememberedAccess(chat.storedId)
   if (want === 'auto') updateActive(x => (x.runtimeId === chat.runtimeId ? { autoAccess: true } : {}))
-  if (want !== 'off' && !chat.info.yolo) void setAccess(chat, want, yoloChats()[chat.storedId] !== undefined).catch(() => {})
+  // A resumed session may still have YOLO enabled on the backend even when the UI default is Off.
+  // Explicitly enforce Off instead of merely skipping the Auto/Full re-apply: otherwise commands
+  // run without approval and the approval sheet never receives a request.
+  if (want === 'off') {
+    void setAccess(chat, 'off', false).catch(e => toast(`Could not enforce approval mode: ${errText(e)}`, 'error', 8000))
+  } else if (!chat.info.yolo) void setAccess(chat, want, yoloChats()[chat.storedId] !== undefined).catch(() => {})
   else if (want === 'auto') void setPluginAuto(chat.storedId, true).catch(() => {})
 })
 
