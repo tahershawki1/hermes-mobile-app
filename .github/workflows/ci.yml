@@ -7,7 +7,7 @@ env:
 
 on:
   push:
-    branches: [main]
+    branches: [main, development]
   pull_request:
 
 # The token only reads (the code, a PR's file list and commits). The repository's default is read-only too; this keeps
