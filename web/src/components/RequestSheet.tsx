@@ -46,6 +46,20 @@ function Approval({ req }: { req: ServerRequest }) {
   )
 }
 
+/** Approval actions are visible beside the chat composer, without a blocking modal. */
+export function InlineApproval({ req }: { req: ServerRequest }) {
+  const p = req.params as Record<string, unknown>
+  const choices = ((p.choices as ApprovalChoice[] | undefined)?.length ? p.choices as ApprovalChoice[] : (['once', p.allow_session !== false ? 'session' : null, p.allow_permanent ? 'always' : null, 'deny'].filter(Boolean) as ApprovalChoice[]))
+  return <section role="group" aria-label="Approval required" style={{ margin: '8px 12px', padding: 14, borderRadius: 16, border: '1px solid #777', maxHeight: '45vh', overflowY: 'auto', flexShrink: 0 }}>
+    <div className="sheet-title">⚠ Approve {String(p.tool_name || 'command')}?</div>
+    {p.description ? <div className="sheet-desc"><Linked text={tidyApprovalText(String(p.description))} /></div> : null}
+    {p.command ? <pre className="sheet-code" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}><Linked text={String(p.command)} /></pre> : null}
+    <div className="sheet-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+      {choices.map(c => <button key={c} className={c === 'deny' ? 'btn danger' : c === 'once' ? 'btn primary' : 'btn'} onClick={() => { haptic(); answerRequest(req, { choice: c }) }}>{CHOICE_LABEL[c] || c}</button>)}
+    </div>
+  </section>
+}
+
 function OneQuestion({
   q,
   value,
