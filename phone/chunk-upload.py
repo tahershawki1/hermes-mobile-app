@@ -6,6 +6,7 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import re
+import shutil
 import threading
 
 ROOT = Path("/sdcard/HermesUploads")
@@ -66,7 +67,12 @@ class Handler(BaseHTTPRequestHandler):
                 ROOT.mkdir(parents=True, exist_ok=True)
                 safe = re.sub(r"[^\w.() -]", "_", name)[:120] or "file"
                 dest = ROOT / (ident + "-" + safe)
-                os.replace(target, dest)
+                # Termux private storage and /sdcard are different filesystems (EXDEV).
+                staging = ROOT / (ident + '.copying')
+                with target.open('rb') as source, staging.open('wb') as output:
+                    shutil.copyfileobj(source, output, 256 * 1024)
+                os.replace(staging, dest)
+                target.unlink()
                 return self.respond(200, {"path": str(dest)})
             except OSError as exc:
                 return self.respond(500, {"error": str(exc)})
