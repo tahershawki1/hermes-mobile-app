@@ -1,12 +1,12 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # One-step phone setup. Run it in TERMUX (not inside Debian):
-#   curl -fsSL https://raw.githubusercontent.com/omarqaterge/hermes-mobile-app/main/phone/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/development/phone/install.sh | bash
 # or, from a clone:  bash ~/hermes-mobile/phone/install.sh
 # It lets the app start Hermes, installs the Hermes Mobile plugin into Debian and the supervisor script into ~/bin, gives
 # Hermes access to the phone (phone/phone-access.sh: files, Termux:API, Shizuku; no root needed), then downloads the app
 # and opens Android's installer. Safe to run again (it just refreshes everything).
 set -e
-REPO="https://github.com/omarqaterge/hermes-mobile-app"
+REPO="https://github.com/tahershawki1/hermes-mobile-app"
 PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
 die() { echo "ERROR: $*" >&2; exit 1; }
 
@@ -26,8 +26,8 @@ here=""
 if [ -z "$here" ] || [ ! -d "$here/hermes-plugin/hermes-mobile" ]; then
   echo "0/5 Getting Hermes Mobile into ~/hermes-mobile"
   command -v git >/dev/null || pkg install -y git
-  if [ -d "$HOME/hermes-mobile/.git" ]; then git -C "$HOME/hermes-mobile" pull -q --ff-only
-  else git clone -q --depth 1 "$REPO.git" "$HOME/hermes-mobile"; fi
+  if [ -d "$HOME/hermes-mobile/.git" ]; then git -C "$HOME/hermes-mobile" fetch -q origin development && git -C "$HOME/hermes-mobile" checkout -q -B development origin/development
+  else git clone -q --depth 1 --branch development "$REPO.git" "$HOME/hermes-mobile"; fi
   here="$HOME/hermes-mobile"
 fi
 
