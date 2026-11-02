@@ -26,7 +26,7 @@ here=""
 if [ -z "$here" ] || [ ! -d "$here/hermes-plugin/hermes-mobile" ]; then
   echo "0/5 Getting Hermes Mobile into ~/hermes-mobile"
   command -v git >/dev/null || pkg install -y git
-  if [ -d "$HOME/hermes-mobile/.git" ]; then git -C "$HOME/hermes-mobile" fetch -q origin development && git -C "$HOME/hermes-mobile" checkout -q -B development origin/development
+  if [ -d "$HOME/hermes-mobile/.git" ]; then git -C "$HOME/hermes-mobile" remote set-url origin "$REPO.git" && git -C "$HOME/hermes-mobile" fetch -q origin development && git -C "$HOME/hermes-mobile" checkout -q -B development origin/development
   else git clone -q --depth 1 --branch development "$REPO.git" "$HOME/hermes-mobile"; fi
   here="$HOME/hermes-mobile"
 fi
