@@ -68,7 +68,7 @@ fi
 # Independent fork variant: keep original Java package, rename installed app ID.
 MANIFEST=AndroidManifest.xml
 RENAME_ARGS=()
-if [ "${HM_APP_VARIANT:-}" = "taher" ]; then
+if [ "${HM_APP_VARIANT:-}" = "taher" ] || [ "${HM_APP_VARIANT:-}" = "taher-test" ]; then
   MANIFEST=build/AndroidManifest.taher.xml
   python3 - "$MANIFEST" <<'PY'
 from pathlib import Path
@@ -81,7 +81,12 @@ s = s.replace('com.omarqaterge.hermesmobile.shizuku', 'com.tahershawki.hermesmob
 s = s.replace('android:label="@string/app_name"', 'android:label="Hermes Taher"')
 Path(sys.argv[1]).write_text(s)
 PY
-  RENAME_ARGS=(--rename-manifest-package com.tahershawki.hermesmobile)
+  if [ "${HM_APP_VARIANT:-}" = "taher-test" ]; then
+    sed -i "s/com.tahershawki.hermesmobile.camera/com.tahershawki.hermesmobile.test.camera/g; s/com.tahershawki.hermesmobile.shizuku/com.tahershawki.hermesmobile.test.shizuku/g" "$MANIFEST"
+    RENAME_ARGS=(--rename-manifest-package com.tahershawki.hermesmobile.test)
+  else
+    RENAME_ARGS=(--rename-manifest-package com.tahershawki.hermesmobile)
+  fi
 fi
 "$BT/aapt2" link -I "$ANDROID_JAR" --manifest "$MANIFEST" -A assets \
   "${RENAME_ARGS[@]}" \
