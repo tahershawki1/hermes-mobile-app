@@ -2318,6 +2318,49 @@ public class MainActivity extends Activity {
         }
 
 
+        /** Bounded binary upload to Termux; each call handles at most 256 KiB. */
+        private String uploadRequest(String endpoint, String id, long offset, byte[] data, String name, long size) {
+            HttpURLConnection c = null;
+            try {
+                if (!id.matches("hm[a-z0-9]{8,64}")) return "invalid upload id";
+                URL url = new URL("http://127.0.0.1:9127/" + endpoint);
+                c = (HttpURLConnection) url.openConnection();
+                c.setRequestMethod("POST");
+                c.setConnectTimeout(5000);
+                c.setReadTimeout(30000);
+                c.setDoOutput(true);
+                c.setRequestProperty("X-Upload-Id", id);
+                c.setRequestProperty("X-Offset", Long.toString(offset));
+                if (name != null) c.setRequestProperty("X-File-Name", android.util.Base64.encodeToString(name.getBytes(StandardCharsets.UTF_8), android.util.Base64.NO_WRAP | android.util.Base64.URL_SAFE));
+                c.setRequestProperty("X-File-Size", Long.toString(size));
+                c.setFixedLengthStreamingMode(data.length);
+                try (OutputStream out = c.getOutputStream()) { out.write(data); }
+                try (InputStream in = (c.getResponseCode() < 400 ? c.getInputStream() : c.getErrorStream())) {
+                    if (in == null) return "upload server returned no response";
+                    ByteArrayOutputStream buf = new ByteArrayOutputStream();
+                    byte[] block = new byte[2048]; int n;
+                    while ((n = in.read(block)) > 0 && buf.size() < 16384) buf.write(block, 0, n);
+                    return new String(buf.toByteArray(), StandardCharsets.UTF_8);
+                }
+            } catch (Exception e) { return "upload service unavailable: " + e.getMessage(); }
+            finally { if (c != null) c.disconnect(); }
+        }
+
+        @JavascriptInterface
+        public String uploadChunk(String id, long offset, String base64) {
+            try {
+                if (base64.length() > 400000) return "chunk too large";
+                byte[] bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT);
+                if (bytes.length > 262144) return "chunk too large";
+                return uploadRequest("chunk", id, offset, bytes, null, 0);
+            } catch (Exception e) { return "invalid chunk"; }
+        }
+
+        @JavascriptInterface
+        public String finishUpload(String id, String name, long size) {
+            return uploadRequest("finish", id, 0, new byte[0], name, size);
+        }
+
         @JavascriptInterface
         public void httpAsync(String key, final int id, final String method, final String path, final String body) {
             if (!ok(key)) return;
