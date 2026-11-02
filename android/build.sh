@@ -75,7 +75,7 @@ from pathlib import Path
 import re
 import sys
 s = Path("AndroidManifest.xml").read_text()
-s = re.sub(r'android:name="\\.([A-Za-z][A-Za-z0-9_]*)"', lambda m: 'android:name="com.omarqaterge.hermesmobile.' + m.group(1) + '"', s)
+s = re.sub(r'android:name="\.([A-Za-z][A-Za-z0-9_]*)"', lambda m: 'android:name="com.omarqaterge.hermesmobile.' + m.group(1) + '"', s)
 s = s.replace('com.omarqaterge.hermesmobile.camera', 'com.tahershawki.hermesmobile.camera')
 s = s.replace('com.omarqaterge.hermesmobile.shizuku', 'com.tahershawki.hermesmobile.shizuku')
 s = s.replace('android:label="@string/app_name"', 'android:label="Hermes Taher"')
