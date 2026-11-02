@@ -1,0 +1,56 @@
+name: Watch upstream Hermes
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: watch-upstream-hermes
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check upstream and open issue only for unseen updates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          UPSTREAM: omarqaterge/hermes-mobile-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$UPSTREAM"
+          upstream=$(gh api "repos/$UPSTREAM" --jq '.default_branch')
+          sha=$(gh api "repos/$UPSTREAM/commits/$upstream" --jq '.sha')
+          release=$(gh api "repos/$UPSTREAM/releases/latest" --jq '.tag_name' 2>/dev/null || echo none)
+          echo "Upstream branch: $upstream, SHA: $sha, release: $release"
+          # GitHub Issues are the persistent state: no mutable workflow cache or force-push.
+          # First run establishes a baseline; subsequent runs notify about changes.
+          state=$(gh issue list --repo "$REPO" --state all --limit 100 --json title,number --jq '.[] | select(.title == "[Upstream Watch] State") | .number' | head -n1)
+          if [ -z "$state" ]; then
+            gh issue create --repo "$REPO" --title "[Upstream Watch] State" \
+              --body "$(printf 'Last SHA: %s\nLast release: %s\n\nThis issue tracks the last observed upstream state. Do not close/delete it.\n' "$sha" "$release")"
+            echo "Baseline recorded; no update announcement on initial run."
+            exit 0
+          fi
+          old=$(gh issue view "$state" --repo "$REPO" --json body --jq '.body')
+          old_sha=$(printf '%s\n' "$old" | sed -n 's/^Last SHA: //p' | head -n1)
+          old_release=$(printf '%s\n' "$old" | sed -n 's/^Last release: //p' | head -n1)
+          if [ "$sha" = "$old_sha" ] && [ "$release" = "$old_release" ]; then
+            echo "No upstream changes."
+            exit 0
+          fi
+          title="[Upstream Watch] ${release} ${sha:0:12}"
+          body=$(printf 'New upstream state detected. Review before merging into development.\n\nRepository: https://github.com/%s\nBranch: %s\nPrevious commit: %s\nCurrent commit: %s\nPrevious release: %s\nLatest release: %s\nCompare: https://github.com/%s/compare/%s...%s\n\nNo automatic merges or APK installs occur.\n' "$UPSTREAM" "$upstream" "$old_sha" "$sha" "$old_release" "$release" "$UPSTREAM" "$old_sha" "$sha")
+          existing=$(gh issue list --repo "$REPO" --state all --limit 100 --json title --jq ".[] | select(.title == \"$title\") | .title" | head -n1)
+          if [ -z "$existing" ]; then
+            gh issue create --repo "$REPO" --title "$title" --body "$body"
+          fi
+          gh issue edit "$state" --repo "$REPO" --body "$(printf 'Last SHA: %s\nLast release: %s\n\nThis issue tracks the last observed upstream state. Do not close/delete it.\n' "$sha" "$release")"
