@@ -100,3 +100,5 @@
 | `test_autostart.sh` | `Autostart.java`: which makers get the step, every maker has a page list, every package the table opens is in the manifest `<queries>` (Android 11+ hides other packages otherwise). CI job `android`. |
 
 **Battery tools (`tools/battery/`, a folder)**: `bench.py` (idle / chat / cron benchmarks and a `report` mode; method in `docs/battery-report.md`), `hmsamp.sh` (sampler run as the adb shell user: wake lock and `/proc` ticks per process and thread), `hmreport.py` (summarises a sampler capture), `hmnet.sh` (network bytes per UID), `reqcost.py` (CPU cost of one request to the dashboard), `wschat.py` (one benchmark chat turn over the gateway WebSocket, then deletes the chat).
+
+`diagnose-latency.sh` diagnoses latency in the Hermes mobile environment.
