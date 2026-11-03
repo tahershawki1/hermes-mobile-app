@@ -1,14 +1,8 @@
 name: Hermes Taher Production Release
-# Production workflow: a direct main-branch push should publish a signed release.
+# Publishing is an explicit maintainer action. Ordinary PR merges must never
+# publish a signed APK: integration and compatibility checks run via CI instead.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'android/**'
-      - 'web/**'
-      - 'phone/**'
-      - '.github/workflows/release-taher.yml'
 permissions:
   contents: write
 jobs:
