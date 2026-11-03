@@ -83,3 +83,5 @@ Two-way, conflict-free sync of `USER.md` and `MEMORY.md` between devices through
 #### `keep_note.py`
 
 `keep_note.py "title" "body" [account]` creates a Google Keep note (Keep's API is Workspace-only): sends Keep a share intent through `rish`, waits for its Save button via `uiautomator`, picks the account, taps Save, checks the dialog closed and returns to Home. Exit 0 saved, 1 failed (message on stderr).
+
+Additional phone scripts: `chunk-upload.py` uploads chunked files; `install-chunk-upload.sh` installs the chunk upload helper; `shizuku-bridge.py` bridges native Termux Shizuku access into Debian; `shizuku-client.py` is the Debian-side command client.
