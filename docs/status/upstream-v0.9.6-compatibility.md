@@ -32,4 +32,6 @@
 - [ ] Each adaptable feature audited, implemented and tested in its own follow-up PR.
 - [x] Startup-status fix merged to main only after required checks passed (PR #2). **Important finding:** the previous `release-taher.yml` automatically published on `main` changes in web/android/phone. A separate release-safety PR restricts publication to a manual maintainer dispatch. No compatibility work should alter signing keys or create release tags.
 
-**Default for unresolved items:** leave out of `main`, keep their upstream links and risk notes here; never treat an incomplete review as safe to merge. All further feature merges must wait until manual-only release gating has been merged and verified; no automated APK publication is permitted.
+**Release safety (2026-11-03):** PR #3 merged after green CI, switching `release-taher.yml` to `workflow_dispatch` only. Verified the `main` merge ran CI but triggered no automatic production release. The previous PR #2 had triggered the old automatic release workflow; no additional APK should be published by compatibility merges.
+
+**Default for unresolved items:** leave out of `main`, keep their upstream links and risk notes here; never treat an incomplete review as safe to merge. Any future APK publication requires explicit maintainer action; merging feature PRs must not trigger releases.
