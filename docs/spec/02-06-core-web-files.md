@@ -32,8 +32,7 @@ These files carry the plumbing every screen uses. Screens are in 3.
   cached chat.
 - `chatcache.ts` — last-seen items of recent chats (`rememberChat`, `cachedChat`, `forgetChat`, `saveChatToDisk`)
   (2.2.5).
-- `boot.ts` — start-up timing marks (`bootMark`, `lastBoot`, `bootSummary`) in `hm.boot.v1`; the shell logs its own
-  stages to logcat tag `hmboot`.
+- `boot.ts` — start-up timing marks (`bootMark`, `lastBoot`, `bootSummary`) in `hm.boot.v1`; `onBootMark` subscribes to new stages and `useBootSummary` updates the Last start-up row while Settings is open. Duplicate stages do not notify subscribers; the shell logs its own stages to logcat tag `hmboot`.
 - `lazy.ts` — `runLazy(id, global)`: big optional bundles (Mermaid as `hm-mermaid`, OpenUI as `hm-openui`, KaTeX and
   highlight.js as `hm-rich`) ship in `index.html` as inert `<script type="text/hm-lazy">` text (`vite.config.ts`
   `lazyBundle`) and are run once, on first use; a failed load can be retried.
