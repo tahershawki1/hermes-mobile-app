@@ -148,6 +148,7 @@ const BEAT_MS = 15_000
 const DEADLINE_MS = 45_000
 let aliveAt = Date.now()
 let lastBeat = Date.now()
+let heartbeatInFlight = false
 
 client.onAny(() => {
   aliveAt = Date.now()
@@ -163,10 +164,14 @@ setInterval(() => {
     client.invalidate('WebSocket heartbeat timed out')
     return
   }
+  // Avoid stacking heartbeat RPCs when the dashboard is busy executing tools.
+  // One outstanding probe is enough; queued probes only add pressure to the Python server.
+  if (heartbeatInFlight) return
+  heartbeatInFlight = true
   rpc('gateway.ping', {}, DEADLINE_MS).then(
     () => (aliveAt = Date.now()),
     () => {}
-  )
+  ).finally(() => { heartbeatInFlight = false })
 }, BEAT_MS)
 
 /** Back in front: a socket that died while the page was frozen is replaced now, not after the deadline. */
