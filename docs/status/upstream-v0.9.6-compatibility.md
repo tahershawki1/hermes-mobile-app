@@ -1,0 +1,35 @@
+# Upstream v0.9.6 compatibility review (2026-11-03)
+
+**State:** selective integration under review in `integrate/upstream-2026-11-03-safe`. Do not merge the entire upstream branch. Reviewed upstream `omarqaterge/hermes-mobile-app@e33bd2511a1120db28d48363bfb30655decde21d` against the Taher fork `main@bed5414266131b6f43493a52876d4b1f42d7e6bf`. GitHub reports divergence of 572 commits upstream-only and 594 fork-only, with more than 300 changed paths in the cross-fork comparison. The source changelog calls this v0.9.6; at review time the latest published upstream GitHub Release was v0.8.67.
+
+**Integration rule:** preserve Taher-signed releases, the independent app variant, the fork's Termux + Debian + Shizuku bridge, its inline approval controls, custom plugin changes, and the data retention / signing compatibility gate in `docs/status/update-compatibility.md`. Apply only reviewable changes backed by tests. Never silently switch repositories, update signing keys, installer sources, package IDs, or public-report destinations. Do not auto-install or publish any APK as part of this review.
+
+| Upstream change | Classification | Evidence / action | Risk or required follow-up |
+| --- | --- | --- | --- |
+| Earlier chat open and ordered initial requests | Already integrated; no duplicate | `web/src/chatopen.ts` and `web/src/chatorder.ts` have identical Git blobs across both repos | Measure startup on a real phone before promising the upstream 0.3 s figure |
+| Provider fallback / key-rotation foundation | Already partly integrated; review follow-up | `web/src/providers.ts` identical, and fork includes `components/Rotation.tsx`; that component differs from upstream after subsequent fixes | Port the bounded-loading and retry improvements selectively; test with empty providers and slow/failing dashboard |
+| Turn file-change tracking | Existing foundation | `web/src/changes.ts` identical; separate `Changes.tsx` component diverged | Retest end-to-end card/diff UX before taking newer presentation changes |
+| Offline voice recognition | Existing engine | `web/src/stt.ts` and Android `SttEngine.java` identical Git blobs | Do not download or replace speech model files without device/RAM testing |
+| Last start-up row refresh | **Ported to this integration branch** | Upstream commit [6729235](https://github.com/omarqaterge/hermes-mobile-app/commit/6729235a410d6a8d01a80a55458b0a9c2cd9881e): add `onBootMark` + `useBootSummary` and its unit test; update fork's existing Settings row and spec | CI and real-device check still required |
+| Bundled plugin follows app updates | Adaptable, **not merged** | Upstream [c732ef7](https://github.com/omarqaterge/hermes-mobile-app/commit/c732ef74f10a883ecfc11e68a2fdc380995f5c13) / [eb099a8](https://github.com/omarqaterge/hermes-mobile-app/commit/eb099a87935db33c1a2eb19f369bf01691aee96f); fork currently lacks `PluginSync.java`, `plugin-sync.ts`, `phone/plugin-update.sh` | Must preserve user-modified plugins and the fork's Debian/Shizuku scripts; require signed bundle hash verification, rollback, idle-only restart, and handset test |
+| Dashboard-ready reconnect | Adaptable, **not merged** | Upstream [fcc81c5](https://github.com/omarqaterge/hermes-mobile-app/commit/fcc81c529c273c53a7b8bbafa18989793582a540) changes Android service, native bridge and `gateway.ts` | Fork's service and security bridge have custom changes; guard poll lifetime, battery and reconnect races and run native/browser checks |
+| Settings loaders never remain on Loading | Adaptable, **not merged** | Upstream [0e4bdaf](https://github.com/omarqaterge/hermes-mobile-app/commit/0e4bdaf1874df2e0046dee302f3214843cd520ee) changes shared `useLoader`/error UI and model-provider views | Shared-screen behavior affects many custom settings. Reconcile fork's newer UI, then test slow, empty, error and retry states |
+| Live voice interruption | Adaptable, **not merged** | Upstream v0.9.6 changelog; fork `live.ts` diverges | Test echo handling, noise-triggered interruptions and microphone lifecycle before incorporating |
+| Background-app improvements | Adaptable, **not merged** | Upstream v0.9.6 native background app changes | Must verify against the fork's private Termux-host/Shizuku bridge, approval policy and no-root behavior |
+| First-Allow biometric confirmation | Adaptable, **not merged** | Upstream [b22eaac](https://github.com/omarqaterge/hermes-mobile-app/commit/b22eaacb6104ee70d7e7646db088f9dfb719bcf2) adds native `ApprovalLock.java` and web `approval-lock.ts`; neither is yet in the fork | Do not replace the fork's inline Allow/Deny flow. Integrate only with matching notification and session authorization logic |
+| Report a problem | Adaptable, **not merged** | Upstream [cfb24dd](https://github.com/omarqaterge/hermes-mobile-app/commit/cfb24dd4889d84d1d6a7630423fe44882e2059a4) includes a report relay targeting the original repository | Adapt to Taher repository first, audit secret/log scrubbing and opt-in, then deploy independently; never send user's reports to original maintainer |
+| Rename app and all user-facing strings to Hermux | **Excluded as-is: fork-policy conflict** | Upstream [d0c7bbf](https://github.com/omarqaterge/hermes-mobile-app/commit/d0c7bbf2c893d89edbae4b9100028a6a1da32f62) | Would overwrite the independent Hermes Taher identity and app setup text. Keep original functional changes, not the rebrand |
+| Accept hermuxlab updates and ship hermux.apk | **Excluded as-is: fork-policy / signing conflict** | Upstream [cf7da4d](https://github.com/omarqaterge/hermes-mobile-app/commit/cf7da4da29c1baca067679a8641e1c343ef9e8c7) | The fork must get APKs only from its own signed release channel. Preserve `update-compatibility.md` checks |
+| Move pictures to Pictures/Hermux | **Excluded as-is: file-path / identity conflict** | Upstream [c8ccbf5](https://github.com/omarqaterge/hermes-mobile-app/commit/c8ccbf52c89522c827e052d865793a2e328e8550) | Migrating to an upstream-branded folder is not appropriate. Any future migration must use the Taher path and avoid deleting originals |
+
+## Verification checklist
+
+- [x] Live GitHub upstream/fork head and latest upstream release reviewed.
+- [x] Identical SHA checked for already-integrated core modules; do not cherry-pick those again.
+- [x] Isolated startup-status fix and unit test copied, fork's existing Settings preserved, specs updated.
+- [ ] Web unit/typecheck, browser checks and spec check confirmed green in the integration PR.
+- [ ] Android real-device confirmation of the Last start-up row.
+- [ ] Each adaptable feature audited, implemented and tested in its own follow-up PR.
+- [ ] Merge to main only after required checks pass; no APK released by this review.
+
+**Default for unresolved items:** leave out of `main`, keep their upstream links and risk notes here; never treat an incomplete review as safe to merge.
