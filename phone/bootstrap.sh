@@ -2,7 +2,7 @@
 # The whole phone side in one go, no questions asked: Termux packages, Debian, Hermes Agent, the Hermes Mobile plugin and
 # the supervisor. Run it in TERMUX (not inside Debian). Made for a computer agent driving the phone over adb (see
 # AGENT_INSTALL.md), works by hand too:
-#   curl -fsSL https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/development/phone/bootstrap.sh -o hm.sh && bash hm.sh
+#   curl -fsSL https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/main/phone/bootstrap.sh -o hm.sh && bash hm.sh
 # Rooted phone and you'd rather run Debian with chroot-distro (native speed) than proot-distro: HM_DISTRO=chroot bash hm.sh
 # Then set the model (the key goes to Hermes's .env, never anywhere else):
 #   bash hm.sh model <provider> <model> [ENV_NAME=key]     e.g.  bash hm.sh model openrouter openai/gpt-5 OPENROUTER_API_KEY=sk-...
@@ -95,7 +95,7 @@ fi
 
 # Run from a clone: its own scripts (and plugin); otherwise the latest from GitHub.
 src=$(cd "$(dirname "$0")" 2>/dev/null && pwd) || src=""
-RAW=https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/development
+RAW=https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/main
 
 # Phone access early (it is run again by install.sh): rish exists from here on, and the files / Shizuku prompts come while
 # the user is still looking at the phone. Never fails; what is missing goes to ~/.hermes-mobile/todo.
