@@ -47,6 +47,7 @@ jobs:
             VERSION_NAME="1.0.${GITHUB_RUN_NUMBER}" VERSION_CODE="$((100000 + GITHUB_RUN_NUMBER))" android/build.sh
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs android/build/hermes-mobile.apk
           cp android/build/hermes-mobile.apk Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk
+          cp android/build/hermes-mobile.apk Hermes-Taher-1.0.0.apk
           sha256sum Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk > Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk.sha256
           rm -f "$RUNNER_TEMP/taher.keystore"
       - uses: actions/upload-artifact@v4
@@ -55,8 +56,9 @@ jobs:
           path: |
             Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk
             Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk.sha256
+            Hermes-Taher-1.0.0.apk
           retention-days: 90
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "taher-v1.0.${GITHUB_RUN_NUMBER}" Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk.sha256 --target "$GITHUB_SHA" --title "Hermes Taher 1.0.${GITHUB_RUN_NUMBER}" --notes "Production signed Android release."
+        run: gh release create "taher-v1.0.${GITHUB_RUN_NUMBER}" Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk.sha256 Hermes-Taher-1.0.0.apk --target "$GITHUB_SHA" --title "Hermes Taher 1.0.${GITHUB_RUN_NUMBER}" --notes "Production signed Android release."
