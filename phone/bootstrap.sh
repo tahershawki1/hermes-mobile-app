@@ -120,7 +120,7 @@ elif [ "${sdk:-0}" -ge 31 ]; then
     "$HOME/bin/rish" -c 'device_config set_sync_disabled_for_tests persistent; device_config put activity_manager max_phantom_processes 2147483647; settings put global settings_enable_monitor_phantom_procs false' </dev/null >/dev/null 2>&1 || true
     say "android: child-process limit lifted (via Shizuku)"
   else
-    say "phone: Android may stop this install (\"signal 9\"). To prevent it: Developer options → Disable child process restrictions (Android 14+). Then carry on."
+    say "phone: Android may stop this install (signal 9). Start Shizuku and grant Termux access, or disable Android child process restrictions in Developer options."
   fi
 fi
 
@@ -266,12 +266,12 @@ while IFS= read -r t; do [ -n "$t" ] && say "TODO $t"; done < "$HOME/.hermes-mob
 # HM_APP_TOKEN, the app is already installed and running this). Never fails the setup.
 if [ -z "${HM_NO_APK:-}${HM_APP_TOKEN:-}" ]; then
   apk="$HOME/hermes-mobile.apk"
-  if curl -fsL -o "$apk" "https://github.com/omarqaterge/hermes-mobile-app/releases/latest/download/hermes-mobile.apk"; then
+  if curl -fsL -o "$apk" "https://github.com/tahershawki1/hermes-mobile-app/releases/latest/download/hermes-mobile.apk"; then
     say "phone: tap Install (if Android asks which app to use, pick Package installer; allow Termux to install apps if asked), then open Hermes Mobile"
     termux-open --content-type application/vnd.android.package-archive "$apk" 2>/dev/null || say "TODO app: open $apk (termux-open $apk) to install Hermes Mobile"
   else
     rm -f "$apk"
-    say "TODO app: download hermes-mobile.apk from the latest release (github.com/omarqaterge/hermes-mobile-app/releases)"
+    say "TODO app: download hermes-mobile.apk from the latest release (github.com/tahershawki1/hermes-mobile-app/releases)"
   fi
 fi
 say "DONE"
