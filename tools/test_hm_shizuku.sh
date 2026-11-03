@@ -186,7 +186,7 @@ check "[ \$(grep -c 'install proot-distro git curl termux-api unzip android-tool
 check "grep -q 'cp \"\$here/phone/hm-shizuku\" \"\$HOME/bin/hm-shizuku\"' phone/install.sh && grep -q 'chmod +x.*\$HOME/bin/hm-shizuku' phone/install.sh" "install.sh: installs ~/bin/hm-shizuku"
 check "[ \$(grep -n 'bin/hm-shizuku' phone/install.sh | head -1 | cut -d: -f1) -lt \$(grep -n 'phone-access.sh' phone/install.sh | grep bash | head -1 | cut -d: -f1) ]" "install.sh: hm-shizuku is in ~/bin before phone-access.sh runs"
 check "grep -q 'need+=(android-tools)' phone/phone-access.sh" "phone-access.sh: installs android-tools when adb is missing"
-check "grep -q \"rish\\\" -c 'pm grant com.omarqaterge.hermesmobile android.permission.WRITE_SECURE_SETTINGS' </dev/null.*|| true\" phone/phone-access.sh" "phone-access.sh: grants the app WRITE_SECURE_SETTINGS through rish (best effort)"
+check "grep -q 'pm grant \\$app_id android.permission.WRITE_SECURE_SETTINGS' phone/phone-access.sh && grep -q 'com.omarqaterge.hermesmobile' phone/phone-access.sh" "phone-access.sh: grants the app WRITE_SECURE_SETTINGS through rish (best effort)"
 check "grep -q 'pm grant \$APP android.permission.WRITE_SECURE_SETTINGS 2>/dev/null || true' tools/setup-phone.sh" "setup-phone.sh: grants the app WRITE_SECURE_SETTINGS (best effort)"
 check "grep -q 'Sh \"pm grant \$APP android.permission.WRITE_SECURE_SETTINGS\"' tools/setup-phone.ps1" "setup-phone.ps1: same grant"
 first() { grep -n "$2" "$1" | head -1 | cut -d: -f1; }
