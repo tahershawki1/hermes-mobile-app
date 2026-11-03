@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Debian-side rish shim. Usage: rish -c 'id'."""
-import json, os, socket, sys
+import base64, json, os, socket, sys
 SOCKET = "/data/data/com.termux/files/home/.hermes-mobile/shizuku.sock"
 
 def main():
@@ -12,7 +12,8 @@ def main():
         with socket.socket(socket.AF_UNIX) as conn:
             conn.settimeout(67)
             conn.connect(SOCKET)
-            conn.sendall((json.dumps({"command": args[1]}) + "\n").encode())
+            stdin_data = sys.stdin.buffer.read(65536) if not sys.stdin.isatty() else b""
+            conn.sendall((json.dumps({"command": args[1], "stdin_b64": base64.b64encode(stdin_data).decode("ascii")}) + "\n").encode())
             data = bytearray()
             while True:
                 chunk = conn.recv(8192)
