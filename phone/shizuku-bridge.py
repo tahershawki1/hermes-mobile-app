@@ -2,7 +2,7 @@
 """Local Unix-socket bridge: execute Shizuku rish only from Termux host.
 The socket lives in Termux private home; never listens on a TCP port.
 """
-import json, os, socket, subprocess, sys
+import base64, json, os, socket, subprocess, sys
 from pathlib import Path
 
 HOME = Path(os.environ["HOME"])
@@ -44,7 +44,11 @@ def main():
                 if not isinstance(command, str) or not command or len(command) > 32768:
                     raise ValueError("command must be non-empty text")
                 timeout = min(max(int(req.get("timeout", 45)), 1), 60)
-                result = subprocess.run([str(RISH), "-c", command], stdin=subprocess.DEVNULL,
+                stdin_data = req.get("stdin_b64", "")
+                if not isinstance(stdin_data, str) or len(stdin_data) > 131072:
+                    raise ValueError("invalid stdin")
+                input_data = base64.b64decode(stdin_data, validate=True) if stdin_data else None
+                result = subprocess.run([str(RISH), "-c", command], input=input_data,
                                         capture_output=True, timeout=timeout)
                 response = {"code": result.returncode,
                             "stdout": result.stdout[:1048576].decode("utf-8", "replace"),
