@@ -282,6 +282,8 @@ module.exports = async t => {
   await page.getByPlaceholder('Message Hermes').fill('see https://example.com/b')
   await page.locator('.composer').getByRole('button', { name: 'Send' }).click()
   await page.locator('.msg.assistant', { hasText: 'Read' }).last().waitFor({ timeout: 5000 })
+  // A partial assistant reply can arrive before its tool run has settled; do not interact with a moving fold.
+  await page.locator('.composer').getByRole('button', { name: 'Send' }).waitFor({ timeout: 15000 })
   {
     // openExternal's browser path is window.open; record the calls instead of opening real tabs.
     await page.evaluate(() => { window.__opened = []; window.__realOpen = window.open; window.open = u => { window.__opened.push(String(u)); return null } })
@@ -299,8 +301,10 @@ module.exports = async t => {
       const card = link.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " tool ")]')
       const head = card.locator('.tool-head')
       if (await head.count() && !(await link.isVisible())) await head.click()
-      await link.scrollIntoViewIfNeeded()
-      await link.click()
+      // The tool body slides open. Allow the real UI animation to finish before clicking its link.
+      await card.locator('.collapse').evaluate(el => Promise.all(el.getAnimations().map(a => a.finished.catch(() => {}))))
+      await link.waitFor({ state: 'visible', timeout: 10000 })
+      await link.click({ timeout: 10000 })
     }
     const code = page.locator('.msg.assistant a.code-link code', { hasText: 'https://example.com/c' })
     check((await code.count()) === 1, 'a web address in inline code is a link')
