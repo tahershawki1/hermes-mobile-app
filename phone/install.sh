@@ -42,10 +42,15 @@ mkdir -p "$HOME/bin"
 cp "$here/phone/hermes-services" "$HOME/bin/hermes-services"
 cp "$here/phone/chunk-upload.py" "$HOME/bin/hermes-chunk-upload.py"
 cp "$here/phone/hermes-debian" "$HOME/bin/hermes-debian"
+cp "$here/phone/shizuku-bridge.py" "$HOME/bin/hermes-shizuku-bridge.py"
 # hm-shizuku: lets Shizuku start again by itself after a restart (Termux's own adb; phone-access.sh pairs it).
 cp "$here/phone/hm-shizuku" "$HOME/bin/hm-shizuku"
 chmod +x "$HOME/bin/hermes-services" "$HOME/bin/hermes-debian" "$HOME/bin/hm-shizuku"
 DEB="$HOME/bin/hermes-debian"
+# Install the Debian rish shim; it delegates to the host's private Unix socket.
+"$DEB" --put "$here/phone/shizuku-client.py" /usr/local/bin/rish
+"$DEB" chmod 755 /usr/local/bin/rish
+
 if [ "$HM_DISTRO" = chroot ]; then
   "$DEB" true || die "Debian is not installed with chroot-distro yet (or Termux has no root). Run: chroot-distro install --name debian debian:trixie"
 else
