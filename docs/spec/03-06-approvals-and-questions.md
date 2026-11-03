@@ -97,3 +97,5 @@ The files behind sections 3.1 to 3.6, and what each one is for (the core files a
 | `notif-answer.ts` | Answers typed into notifications. |
 | `backstack.ts` | The Back-button layer stack. |
 | `swipe.ts` | Swipe right for the drawer, swipe left for the canvas. |
+
+The approval notification uses the accessible label Approval required.
