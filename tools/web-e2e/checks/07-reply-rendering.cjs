@@ -293,7 +293,15 @@ module.exports = async t => {
     else await page.locator('.tool-run').last().click().then(() => page.locator('.tool-head', { hasText: 'web_extract' }).last().click())
     const out = page.locator('.tool-pre a.auto-link', { hasText: 'https://example.com/a' })
     check((await out.count()) >= 1 && (await out.last().textContent()) === 'https://example.com/a', 'a web address in a tool output is a link (trailing dot left out)')
-    if (await out.count()) await out.last().click()
+    if (await out.count()) {
+      // The tool card may still be collapsed after expanding its folded run.
+      const link = out.last()
+      const card = link.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " tool-card ")]')
+      const head = card.locator('.tool-head')
+      if (await head.count() && !(await link.isVisible())) await head.click()
+      await link.scrollIntoViewIfNeeded()
+      await link.click()
+    }
     const code = page.locator('.msg.assistant a.code-link code', { hasText: 'https://example.com/c' })
     check((await code.count()) === 1, 'a web address in inline code is a link')
     if (await code.count()) await code.click()
