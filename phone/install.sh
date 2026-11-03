@@ -80,6 +80,8 @@ echo "    Applying the Hermes Mobile fixes to Hermes (hermes/patches)"
 # Before the restart below: only a Hermes started after Termux got the files permission sees /sdcard.
 echo "    Giving Hermes access to the phone: files, Termux:API, Shizuku (no root needed)"
 bash "$here/phone/phone-access.sh"
+# Start newly installed bridge even if the existing supervisor was already running.
+"$HOME/bin/hermes-services" || echo "    Shizuku bridge supervisor will start on next launch."
 show_todo() {
   [ -s "$HOME/.hermes-mobile/todo" ] || return 0
   echo; echo "Hermes can't reach all of the phone yet. Still to do:"
