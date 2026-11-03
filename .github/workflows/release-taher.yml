@@ -1,4 +1,5 @@
 name: Hermes Taher Production Release
+# Production workflow: a direct main-branch push should publish a signed release.
 on:
   workflow_dispatch:
   push:
