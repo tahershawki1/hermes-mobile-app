@@ -290,18 +290,23 @@ module.exports = async t => {
     const own = page.locator('.msg.user .bubble a.auto-link', { hasText: 'https://example.com/b' })
     check((await own.count()) === 1, 'a web address in my own message is a link')
     if (await own.count()) await own.click()
+    // Expand only when closed: toggling an already-open tool starts its close animation,
+    // leaving a briefly visible link that detaches before a real click can land.
     const head = page.locator('.tool-head', { hasText: 'web_extract' }).last()
-    if (await head.count()) await head.click()
-    else await page.locator('.tool-run').last().click().then(() => page.locator('.tool-head', { hasText: 'web_extract' }).last().click())
+    if (!(await head.count())) {
+      const run = page.locator('button.tool-run', { hasText: 'web_extract' }).last()
+      await run.waitFor({ state: 'visible', timeout: 5000 })
+      if (await run.getAttribute('aria-expanded') === 'false') await run.click()
+    }
+    await head.waitFor({ state: 'visible', timeout: 5000 })
+    if (await head.getAttribute('aria-expanded') === 'false') await head.click()
     const out = page.locator('.tool-pre a.auto-link', { hasText: 'https://example.com/a' })
     check((await out.count()) >= 1 && (await out.last().textContent()) === 'https://example.com/a', 'a web address in a tool output is a link (trailing dot left out)')
     if (await out.count()) {
-      // The tool card may still be collapsed after expanding its folded run.
       const link = out.last()
       const card = link.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " tool ")]')
-      const head = card.locator('.tool-head')
-      if (await head.count() && !(await link.isVisible())) await head.click()
-      // The tool body slides open. Allow the real UI animation to finish before clicking its link.
+      const toolHead = card.locator('.tool-head')
+      if (await toolHead.getAttribute('aria-expanded') === 'false') await toolHead.click()
       await card.locator('.collapse').evaluate(el => Promise.all(el.getAnimations().map(a => a.finished.catch(() => {}))))
       await link.waitFor({ state: 'visible', timeout: 10000 })
       await link.click({ timeout: 10000 })
