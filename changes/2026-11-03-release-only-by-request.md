@@ -1,0 +1,1 @@
+- **App releases happen only when explicitly requested.** Merging tested changes into main no longer publishes an APK automatically; the existing manual release workflow remains available and still uses the same protected production signing key.
