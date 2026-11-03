@@ -1,0 +1,77 @@
+name: Build Hermes Taher APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [development]
+    paths:
+      - 'android/**'
+      - 'web/**'
+      - 'phone/**'
+      - 'tools/sherpa-onnx.sh'
+      - '.github/workflows/build-taher.yml'
+
+concurrency:
+  group: taher-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Cache Android SDK components
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/platforms/android-36
+            ${{ env.ANDROID_HOME }}/build-tools/35.0.0
+          key: android-sdk-36-buildtools-35-v1
+      - name: Install missing Android SDK components
+        run: |
+          [ -f "$ANDROID_HOME/platforms/android-36/android.jar" ] && [ -x "$ANDROID_HOME/build-tools/35.0.0/aapt2" ] || \
+            (yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0" >/dev/null)
+      - name: Build production web UI
+        # Signing key is used only in the later APK step.
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+      - name: Sign production APK with persistent key
+        env:
+          KEYSTORE_B64: ${{ secrets.TAHER_KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/taher.keystore"
+            export KEYSTORE="$RUNNER_TEMP/taher.keystore"
+          else
+            echo "::error::Production signing key TAHER_KEYSTORE_B64 missing. Refusing disposable signature."
+            exit 1
+          fi
+          HM_APP_VARIANT=taher HM_SKIP_WEB_BUILD=1 \
+            VERSION_NAME="1.0.0" VERSION_CODE=100000 android/build.sh
+          if [ -n "${KEYSTORE:-}" ]; then rm -f "$KEYSTORE"; fi
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/build/hermes-mobile.apk | head -n 4
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs android/build/hermes-mobile.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hermes-taher-apk
+          path: android/build/hermes-mobile.apk
+          if-no-files-found: error
+          retention-days: 14

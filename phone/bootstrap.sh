@@ -2,7 +2,7 @@
 # The whole phone side in one go, no questions asked: Termux packages, Debian, Hermes Agent, the Hermes Mobile plugin and
 # the supervisor. Run it in TERMUX (not inside Debian). Made for a computer agent driving the phone over adb (see
 # AGENT_INSTALL.md), works by hand too:
-#   curl -fsSL https://raw.githubusercontent.com/omarqaterge/hermes-mobile-app/main/phone/bootstrap.sh -o hm.sh && bash hm.sh
+#   curl -fsSL https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/development/phone/bootstrap.sh -o hm.sh && bash hm.sh
 # Rooted phone and you'd rather run Debian with chroot-distro (native speed) than proot-distro: HM_DISTRO=chroot bash hm.sh
 # Then set the model (the key goes to Hermes's .env, never anywhere else):
 #   bash hm.sh model <provider> <model> [ENV_NAME=key]     e.g.  bash hm.sh model openrouter openai/gpt-5 OPENROUTER_API_KEY=sk-...
@@ -16,7 +16,7 @@ HERMES_COMMIT=b8a8be185d6e88b35e0a4fa794fea64fb06ed85b
 # hermes-image-<first 12 of HERMES_COMMIT>): a NEW install downloads it instead of installing Debian and running Hermes's
 # installer here. Found by the pin alone; when there is none for this pin (404) the normal install runs. MB = free space
 # the restore needs (download + unpacked + margin; build-image.sh prints the real number).
-HERMES_IMAGE_BASE=https://github.com/omarqaterge/hermes-mobile-app/releases/download
+HERMES_IMAGE_BASE=https://github.com/tahershawki1/hermes-mobile-app/releases/download
 HERMES_IMAGE_MB=5200
 PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
 # Debian runs under proot-distro (no root needed) or chroot-distro (rooted phones, HM_DISTRO=chroot). The choice is kept in
@@ -95,7 +95,7 @@ fi
 
 # Run from a clone: its own scripts (and plugin); otherwise the latest from GitHub.
 src=$(cd "$(dirname "$0")" 2>/dev/null && pwd) || src=""
-RAW=https://raw.githubusercontent.com/omarqaterge/hermes-mobile-app/main
+RAW=https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/development
 
 # Phone access early (it is run again by install.sh): rish exists from here on, and the files / Shizuku prompts come while
 # the user is still looking at the phone. Never fails; what is missing goes to ~/.hermes-mobile/todo.

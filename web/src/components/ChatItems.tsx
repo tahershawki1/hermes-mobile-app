@@ -50,7 +50,7 @@ function argsPreview(args?: Record<string, unknown> | null): string {
 }
 
 export const ToolCard = memo(function ToolCard({ item }: { item: Extract<ChatItem, { kind: 'tool' }> }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(() => item.status === 'running' || item.status === 'generating')
   const [stored, setStored] = useState<string | null>(() => outputCache.get(item.id) ?? null)
   const [loadingOut, setLoadingOut] = useState(false)
   useEffect(() => {
@@ -137,6 +137,7 @@ export const ToolCard = memo(function ToolCard({ item }: { item: Extract<ChatIte
               )}
             </>
           )}
+          {!out && (item.status === 'running' || item.status === 'generating') && <div className="tool-text dim" role="status">Command running · output will appear when available…</div>}
           {!out && loadingOut && <div className="tool-text dim">Loading output…</div>}
           {!out && !loadingOut && !item.summary && item.status === 'done' && stored !== null && <div className="tool-text dim">No output recorded</div>}
         </div>

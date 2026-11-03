@@ -35,7 +35,7 @@ const ATTACH_OPTIONS: Option[] = [
     icon: line('M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM3 16l5-5 4 4 3-3 6 6M15.5 9.5h.01')
   },
   {
-    value: 'file', label: 'File', sub: 'PDF, document, spreadsheet, text, code… (up to 20 MB)', tone: 'purple',
+    value: 'file', label: 'File', sub: 'PDF, document, spreadsheet, text, code…', tone: 'purple',
     icon: line('M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7zM14 3v4h4M9 13h6M9 17h4')
   }
 ]

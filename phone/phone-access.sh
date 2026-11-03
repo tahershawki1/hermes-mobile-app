@@ -81,7 +81,12 @@ if [ -n "$ok" ]; then
   "$HOME/bin/rish" -c 'dumpsys deviceidle whitelist +moe.shizuku.privileged.api' </dev/null >/dev/null 2>&1 || true
   # Lets Hermes Mobile turn Wireless debugging on when Shizuku is down, so Shizuku starts again by itself. An app
   # version that doesn't ask for this permission yet just refuses the grant.
-  "$HOME/bin/rish" -c 'pm grant com.omarqaterge.hermesmobile android.permission.WRITE_SECURE_SETTINGS' </dev/null >/dev/null 2>&1 || true
+  # Both installed variants need their own Android permission. The Taher APK has a distinct application ID.
+  for app_id in com.omarqaterge.hermesmobile com.tahershawki.hermesmobile; do
+    if "$HOME/bin/rish" -c "pm path $app_id" </dev/null 2>/dev/null | grep -q '^package:'; then
+      "$HOME/bin/rish" -c "pm grant $app_id android.permission.WRITE_SECURE_SETTINGS" </dev/null >/dev/null 2>&1 || true
+    fi
+  done
   # Shizuku remembers "Termux may use Shizuku" properly only when Allow was tapped while rish was still waiting. A late
   # tap saves the entry without Termux's package name, and Shizuku drops such an entry at its next start (it asks again).
   cfg=$("$HOME/bin/rish" -c 'cat /data/user_de/0/com.android.shell/shizuku.json' </dev/null 2>/dev/null || true)

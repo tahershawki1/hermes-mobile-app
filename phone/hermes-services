@@ -27,6 +27,10 @@ run_loop() {  # name, command...
 deb="$HOME/bin/hermes-debian"
 [ -x "$deb" ] || deb="proot-distro login debian --"
 PY='PY=$(ls -t /root/.hermes/installs/*/environments/*/venv/bin/python3 2>/dev/null | head -1)'
+run_loop chunk-upload python3 "$HOME/bin/hermes-chunk-upload.py"
+# Keep Shizuku calls on the Android/Termux host. Debian accesses a private Unix socket.
+[ -f "$HOME/bin/hermes-shizuku-bridge.py" ] && run_loop shizuku-bridge python3 "$HOME/bin/hermes-shizuku-bridge.py"
+
 run_loop dashboard $deb bash -lc "exec hermes dashboard --host 127.0.0.1 --port 9119 --no-open"
 # Memory sync is optional (only when its script is installed); without the guard it would start Debian every 10 min for nothing.
 ms=/root/.hermes/scripts/hermes_memory_sync.py

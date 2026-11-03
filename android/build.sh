@@ -65,7 +65,31 @@ if [ "$DEVTOOLS" = 1 ]; then
   "$BT/aapt2" compile --dir build/res-devtools -o build/res-devtools.zip
   RES_ZIPS+=(build/res-devtools.zip)
 fi
-"$BT/aapt2" link -I "$ANDROID_JAR" --manifest AndroidManifest.xml -A assets \
+# Independent fork variant: keep original Java package, rename installed app ID.
+MANIFEST=AndroidManifest.xml
+RENAME_ARGS=()
+if [ "${HM_APP_VARIANT:-}" = "taher" ] || [ "${HM_APP_VARIANT:-}" = "taher-test" ]; then
+  MANIFEST=build/AndroidManifest.taher.xml
+  python3 - "$MANIFEST" <<'PY'
+from pathlib import Path
+import re
+import sys
+s = Path("AndroidManifest.xml").read_text()
+s = re.sub(r'android:name="\.([A-Za-z][A-Za-z0-9_]*)"', lambda m: 'android:name="com.omarqaterge.hermesmobile.' + m.group(1) + '"', s)
+s = s.replace('com.omarqaterge.hermesmobile.camera', 'com.tahershawki.hermesmobile.camera')
+s = s.replace('com.omarqaterge.hermesmobile.shizuku', 'com.tahershawki.hermesmobile.shizuku')
+s = s.replace('android:label="@string/app_name"', 'android:label="Hermes Taher"')
+Path(sys.argv[1]).write_text(s)
+PY
+  if [ "${HM_APP_VARIANT:-}" = "taher-test" ]; then
+    sed -i "s/com.tahershawki.hermesmobile.camera/com.tahershawki.hermesmobile.test.camera/g; s/com.tahershawki.hermesmobile.shizuku/com.tahershawki.hermesmobile.test.shizuku/g" "$MANIFEST"
+    RENAME_ARGS=(--rename-manifest-package com.tahershawki.hermesmobile.test)
+  else
+    RENAME_ARGS=(--rename-manifest-package com.tahershawki.hermesmobile)
+  fi
+fi
+"$BT/aapt2" link -I "$ANDROID_JAR" --manifest "$MANIFEST" -A assets \
+  "${RENAME_ARGS[@]}" \
   --min-sdk-version 26 --target-sdk-version "$PLATFORM" \
   --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" \
   --java build/gen -o build/unsigned.apk "${RES_ZIPS[@]}"

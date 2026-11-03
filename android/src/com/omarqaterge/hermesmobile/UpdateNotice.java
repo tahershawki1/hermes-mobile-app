@@ -21,7 +21,7 @@ final class UpdateNotice {
     static final String CH_UPDATE = "update";
     static final int UPDATE_ID = 10;
     static final long CHECK_MS = 12L * 3600_000;
-    private static final String API = "https://api.github.com/repos/omarqaterge/hermes-mobile-app/releases/latest";
+    private static final String API = "https://api.github.com/repos/tahershawki1/hermes-mobile-app/releases/latest";
     private static volatile boolean busy = false;
 
     private UpdateNotice() {}
@@ -84,11 +84,11 @@ final class UpdateNotice {
         }
         sp.edit().putLong("checked", System.currentTimeMillis()).apply();
         JSONObject rel = new JSONObject(sb.toString());
-        String latest = rel.optString("tag_name", "").replaceFirst("^[vV]", "");
+        String latest = rel.optString("tag_name", "").replaceFirst("^(taher-)?[vV]", "");
         JSONArray assets = rel.optJSONArray("assets");
         String apkUrl = "";
         for (int i = 0; assets != null && i < assets.length(); i++)
-            if (assets.getJSONObject(i).optString("name").toLowerCase().endsWith(".apk"))
+            if (assets.getJSONObject(i).optString("name").startsWith("Hermes-Taher-") && assets.getJSONObject(i).optString("name").endsWith(".apk"))
                 apkUrl = assets.getJSONObject(i).optString("browser_download_url", "");
         boolean hasApk = !apkUrl.isEmpty();
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);

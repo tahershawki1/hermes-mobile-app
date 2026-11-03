@@ -1,12 +1,12 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # One-step phone setup. Run it in TERMUX (not inside Debian):
-#   curl -fsSL https://raw.githubusercontent.com/omarqaterge/hermes-mobile-app/main/phone/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/development/phone/install.sh | bash
 # or, from a clone:  bash ~/hermes-mobile/phone/install.sh
 # It lets the app start Hermes, installs the Hermes Mobile plugin into Debian and the supervisor script into ~/bin, gives
 # Hermes access to the phone (phone/phone-access.sh: files, Termux:API, Shizuku; no root needed), then downloads the app
 # and opens Android's installer. Safe to run again (it just refreshes everything).
 set -e
-REPO="https://github.com/omarqaterge/hermes-mobile-app"
+REPO="https://github.com/tahershawki1/hermes-mobile-app"
 PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
 die() { echo "ERROR: $*" >&2; exit 1; }
 
@@ -26,8 +26,8 @@ here=""
 if [ -z "$here" ] || [ ! -d "$here/hermes-plugin/hermes-mobile" ]; then
   echo "0/5 Getting Hermes Mobile into ~/hermes-mobile"
   command -v git >/dev/null || pkg install -y git
-  if [ -d "$HOME/hermes-mobile/.git" ]; then git -C "$HOME/hermes-mobile" pull -q --ff-only
-  else git clone -q --depth 1 "$REPO.git" "$HOME/hermes-mobile"; fi
+  if [ -d "$HOME/hermes-mobile/.git" ]; then git -C "$HOME/hermes-mobile" remote set-url origin "$REPO.git" && git -C "$HOME/hermes-mobile" fetch -q origin development && git -C "$HOME/hermes-mobile" checkout -q -B development origin/development
+  else git clone -q --depth 1 --branch development "$REPO.git" "$HOME/hermes-mobile"; fi
   here="$HOME/hermes-mobile"
 fi
 
@@ -40,11 +40,17 @@ command -v termux-reload-settings >/dev/null && termux-reload-settings || true
 echo "2/5 Installing the supervisor scripts (~/bin/hermes-services, ~/bin/hermes-debian, ~/bin/hm-shizuku)"
 mkdir -p "$HOME/bin"
 cp "$here/phone/hermes-services" "$HOME/bin/hermes-services"
+cp "$here/phone/chunk-upload.py" "$HOME/bin/hermes-chunk-upload.py"
 cp "$here/phone/hermes-debian" "$HOME/bin/hermes-debian"
+cp "$here/phone/shizuku-bridge.py" "$HOME/bin/hermes-shizuku-bridge.py"
 # hm-shizuku: lets Shizuku start again by itself after a restart (Termux's own adb; phone-access.sh pairs it).
 cp "$here/phone/hm-shizuku" "$HOME/bin/hm-shizuku"
 chmod +x "$HOME/bin/hermes-services" "$HOME/bin/hermes-debian" "$HOME/bin/hm-shizuku"
 DEB="$HOME/bin/hermes-debian"
+# Install the Debian rish shim; it delegates to the host's private Unix socket.
+"$DEB" --put "$here/phone/shizuku-client.py" /usr/local/bin/rish
+"$DEB" chmod 755 /usr/local/bin/rish
+
 if [ "$HM_DISTRO" = chroot ]; then
   "$DEB" true || die "Debian is not installed with chroot-distro yet (or Termux has no root). Run: chroot-distro install --name debian debian:trixie"
 else
@@ -74,6 +80,8 @@ echo "    Applying the Hermes Mobile fixes to Hermes (hermes/patches)"
 # Before the restart below: only a Hermes started after Termux got the files permission sees /sdcard.
 echo "    Giving Hermes access to the phone: files, Termux:API, Shizuku (no root needed)"
 bash "$here/phone/phone-access.sh"
+# Start newly installed bridge even if the existing supervisor was already running.
+"$HOME/bin/hermes-services" || echo "    Shizuku bridge supervisor will start on next launch."
 show_todo() {
   [ -s "$HOME/.hermes-mobile/todo" ] || return 0
   echo; echo "Hermes can't reach all of the phone yet. Still to do:"
@@ -106,7 +114,7 @@ if [ -n "${HM_NO_APK:-}" ]; then echo "Done (app download skipped: HM_NO_APK is 
 show_todo
 echo "5/5 Downloading the app"
 apk="$HOME/hermes-mobile.apk"
-if curl -fsL -o "$apk" "$REPO/releases/latest/download/hermes-mobile.apk"; then
+if curl -fsL -o "$apk" "$REPO/releases/latest/download/Hermes-Taher-1.0.0.apk"; then
   echo
   echo "Done. Android's installer opens now: tap Install (allow Termux to install apps if it asks)."
   echo "If nothing opens, run:  termux-open $apk"

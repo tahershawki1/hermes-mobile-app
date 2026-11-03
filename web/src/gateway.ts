@@ -148,6 +148,7 @@ const BEAT_MS = 15_000
 const DEADLINE_MS = 45_000
 let aliveAt = Date.now()
 let lastBeat = Date.now()
+let heartbeatInFlight = false
 
 client.onAny(() => {
   aliveAt = Date.now()
@@ -163,10 +164,14 @@ setInterval(() => {
     client.invalidate('WebSocket heartbeat timed out')
     return
   }
+  // Avoid stacking heartbeat RPCs when the dashboard is busy executing tools.
+  // One outstanding probe is enough; queued probes only add pressure to the Python server.
+  if (heartbeatInFlight) return
+  heartbeatInFlight = true
   rpc('gateway.ping', {}, DEADLINE_MS).then(
     () => (aliveAt = Date.now()),
     () => {}
-  )
+  ).finally(() => { heartbeatInFlight = false })
 }, BEAT_MS)
 
 /** Back in front: a socket that died while the page was frozen is replaced now, not after the deadline. */
@@ -793,7 +798,12 @@ onChatOpen('access', ({ chat, kind }) => {
   // Hermes (b8a8be18) forgets a chat's YOLO when it is resumed: put it back (Auto access: the plugin's list first).
   const want = rememberedAccess(chat.storedId)
   if (want === 'auto') updateActive(x => (x.runtimeId === chat.runtimeId ? { autoAccess: true } : {}))
-  if (want !== 'off' && !chat.info.yolo) void setAccess(chat, want, yoloChats()[chat.storedId] !== undefined).catch(() => {})
+  // A resumed session may still have YOLO enabled on the backend even when the UI default is Off.
+  // Explicitly enforce Off instead of merely skipping the Auto/Full re-apply: otherwise commands
+  // run without approval and the approval sheet never receives a request.
+  if (want === 'off') {
+    void setAccess(chat, 'off', false).catch(e => toast(`Could not enforce approval mode: ${errText(e)}`, 'error', 8000))
+  } else if (!chat.info.yolo) void setAccess(chat, want, yoloChats()[chat.storedId] !== undefined).catch(() => {})
   else if (want === 'auto') void setPluginAuto(chat.storedId, true).catch(() => {})
 })
 
@@ -1016,8 +1026,6 @@ export async function undoLast(): Promise<void> {
   }
 }
 
-const MAX_ATTACH_MB = 20
-
 function readDataUrl(file: File): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const fr = new FileReader()
@@ -1030,10 +1038,32 @@ function readDataUrl(file: File): Promise<string> {
 /** Queue a photo or file for the next message. Photos go to Hermes's image queue (it sees them); any other
  * file (PDF, text, spreadsheet…) is copied into the chat's workspace and referenced as @file: in the message. */
 export async function attachFile(file: File): Promise<void> {
-  if (file.size > MAX_ATTACH_MB * 1024 * 1024) throw new Error(`${file.name}: too large (max ${MAX_ATTACH_MB} MB)`)
   const a = await targetChat()
-  const dataUrl = await readDataUrl(file)
+  // Native builds stream small chunks through Android to Termux. Browser fallback keeps the original RPC path.
+  const nativeUpload = window.HermesAndroid?.uploadChunk && window.HermesAndroid?.finishUpload
+  const dataUrl = nativeUpload ? '' : await readDataUrl(file)
   let att: Attachment
+  if (nativeUpload) {
+    const id = 'hm' + Date.now().toString(36) + Math.random().toString(36).slice(2)
+    const size = 256 * 1024
+    for (let offset = 0; offset < file.size; offset += size) {
+      const part = await readDataUrl(new File([file.slice(offset, offset + size)], 'chunk'))
+      const answer = window.HermesAndroid!.uploadChunk!(id, offset, part.split(',')[1] || '')
+      if (answer !== 'ok') throw new Error('Upload failed: ' + answer)
+    }
+    const answer = window.HermesAndroid!.finishUpload!(id, file.name || 'file', file.size)
+    const uploaded = JSON.parse(answer) as { path?: string; error?: string }
+    if (!uploaded.path) throw new Error(uploaded.error || 'Upload failed')
+    if (file.type.startsWith('image/')) {
+      await rpc('image.attach', { session_id: a.runtimeId, path: uploaded.path })
+      att = { kind: 'image', name: file.name || 'image', path: uploaded.path, preview: URL.createObjectURL(file) }
+    } else {
+      att = { kind: 'file', name: file.name || 'file', path: uploaded.path, ref: '@file:' + uploaded.path }
+    }
+    const runtimeId = a.runtimeId
+    updateActive(x => (x.runtimeId === runtimeId ? { attachments: [...x.attachments, att] } : null))
+    return
+  }
   if (file.type.startsWith('image/')) {
     const r = await rpc<{ attached?: boolean; name?: string | null; path?: string | null; message?: string | null }>('image.attach_bytes', {
       session_id: a.runtimeId,

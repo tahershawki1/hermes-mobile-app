@@ -33,6 +33,8 @@ interface AndroidBridge {
   startListening?(): void
   startListeningOver?(): void // Live mode: listen while Hermes speaks, without stopping it (barge-in)
   stopListening?(): void
+  uploadChunk?(id: string, offset: number, base64: string): string
+  finishUpload?(id: string, name: string, size: number): string
   sharedItem?(index: number): string
   setLastChat?(id: string, title: string): void
   chatSeen?(id: string): void

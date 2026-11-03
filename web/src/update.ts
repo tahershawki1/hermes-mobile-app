@@ -7,7 +7,7 @@ import { isNewer, notesSince, type ReleaseNotes } from './releasenotes'
 
 export { isNewer }
 
-const REPO = 'omarqaterge/hermes-mobile-app'
+const REPO = 'tahershawki1/hermes-mobile-app'
 
 export type UpdateState = {
   phase: 'idle' | 'checking' | 'uptodate' | 'available' | 'downloading' | 'installing' | 'permission' | 'error'
@@ -61,8 +61,8 @@ export async function checkForUpdate(force = false): Promise<void> {
     const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } })
     if (!r.ok) throw new Error(r.status === 403 ? 'GitHub is limiting requests, try again later.' : `GitHub answered ${r.status}.`)
     const rel = (await r.json()) as { tag_name?: string; assets?: { name: string; browser_download_url: string }[] }
-    const latest = String(rel.tag_name || '').replace(/^v/i, '')
-    const apk = (rel.assets || []).find(a => /\.apk$/i.test(a.name))
+    const latest = String(rel.tag_name || '').replace(/^(?:taher-)?v/i, '')
+    const apk = (rel.assets || []).find(a => /^Hermes-Taher-.*\.apk$/i.test(a.name))
     if (!latest) throw new Error('No release found.')
     if (!isNewer(latest, appVersion())) return set({ phase: 'uptodate', latest, url: '', notes: [] })
     if (!apk) throw new Error(`Version ${latest} has no app file yet.`)
