@@ -474,7 +474,7 @@ async def get_activity():
 
 # ── what of the phone Hermes can reach (the app's Setup check) ──
 
-_RISH = Path("/data/data/com.termux/files/home/bin/rish")  # Shizuku's shell, put there by the installer
+_RISH = Path("/usr/local/bin/rish")  # Debian shim delegates to native Termux Shizuku bridge
 _phone_cache: dict = {}
 
 
