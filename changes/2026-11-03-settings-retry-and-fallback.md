@@ -1,0 +1,1 @@
+- **Model-provider settings no longer remain on Loading.** Slow or failed requests show a clear error and Try again, an empty fallback chain says so, and the chain can load independently of slow credential status. Existing models, keys and preferences are preserved.
