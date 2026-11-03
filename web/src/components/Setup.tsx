@@ -21,7 +21,7 @@ import { formatDuration } from '../text'
 // rows from setupSteps() (setupflow.ts): the check lists every row with a ✓ or ✗ and a button that fixes it or opens
 // the right Android page; the flow shows the first missing required row, then the recommended ones once.
 
-const INSTALL = 'curl -fsSL https://raw.githubusercontent.com/omarqaterge/hermes-mobile-app/main/phone/install.sh | bash'
+const INSTALL = 'curl -fsSL https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/main/phone/bootstrap.sh | bash'
 
 interface Check {
   id: StepId
@@ -262,7 +262,7 @@ function describe(id: StepId, { n, conn, r, enable, autostartDone }: Ctx): Pick<
       const missing = n ? HELPERS.filter(h => !h.has(n)) : []
       return {
         title: 'Termux, Termux:API, Termux:Boot and Shizuku are installed',
-        help: `Hermes needs ${missing.length ? missing.map(h => h.name).join(', ') : 'these apps'}. Hermes Mobile downloads and installs them for you: tap Install on each of Android’s prompts.`,
+        help: `Hermes needs ${missing.length ? missing.map(h => h.name).join(', ') : 'these apps'}. Hermes Mobile downloads and installs them in this screen, one at a time. When Android asks, allow installs from Hermes Mobile, then tap Install. Return here after each prompt; the next app starts automatically. Shizuku is included in this four-app installer.`,
         fix: n && appsPlan(n).action !== 'none' ? { label: 'Install all', run: () => installAll(n) } : undefined
       }
     }
