@@ -2,8 +2,12 @@ name: Hermes Taher Production Release
 on:
   workflow_dispatch:
   push:
-    tags:
-      - 'taher-v*'
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'web/**'
+      - 'phone/**'
+      - '.github/workflows/release-taher.yml'
 permissions:
   contents: write
 jobs:
@@ -40,20 +44,19 @@ jobs:
       - name: Build and sign production APK
         run: |
           KEYSTORE="$RUNNER_TEMP/taher.keystore" HM_APP_VARIANT=taher HM_SKIP_WEB_BUILD=1 \
-            VERSION_NAME=1.0.0 VERSION_CODE=100000 android/build.sh
+            VERSION_NAME="1.0.${GITHUB_RUN_NUMBER}" VERSION_CODE="$((100000 + GITHUB_RUN_NUMBER))" android/build.sh
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs android/build/hermes-mobile.apk
-          cp android/build/hermes-mobile.apk Hermes-Taher-1.0.0.apk
-          sha256sum Hermes-Taher-1.0.0.apk > Hermes-Taher-1.0.0.apk.sha256
+          cp android/build/hermes-mobile.apk Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk
+          sha256sum Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk > Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk.sha256
           rm -f "$RUNNER_TEMP/taher.keystore"
       - uses: actions/upload-artifact@v4
         with:
-          name: Hermes-Taher-1.0.0
+          name: Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}
           path: |
-            Hermes-Taher-1.0.0.apk
-            Hermes-Taher-1.0.0.apk.sha256
+            Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk
+            Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk.sha256
           retention-days: 90
       - name: Publish GitHub release
-        if: startsWith(github.ref, 'refs/tags/taher-v')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" Hermes-Taher-1.0.0.apk Hermes-Taher-1.0.0.apk.sha256 --title "Hermes Taher 1.0.0" --notes "Production signed Android release."
+        run: gh release create "taher-v1.0.${GITHUB_RUN_NUMBER}" Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk Hermes-Taher-1.0.${GITHUB_RUN_NUMBER}.apk.sha256 --target "$GITHUB_SHA" --title "Hermes Taher 1.0.${GITHUB_RUN_NUMBER}" --notes "Production signed Android release."
