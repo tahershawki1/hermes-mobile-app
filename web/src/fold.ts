@@ -60,7 +60,7 @@ export function foldMap(items: ChatItem[], open: ReadonlySet<string>): Map<numbe
   const out = new Map<number, Fold>()
   for (const r of toolRuns(items)) {
     // Keep active commands visible even when the run would normally collapse.
-    const isOpen = r.running || open.has(items[r.start].id)
+    const isOpen = open.has(items[r.start].id)
     for (let k = r.start; k < r.end; k++) {
       const hidden = !isOpen && !(r.running && k === r.end - 1)
       if (k === r.start) out.set(k, { head: r, open: isOpen, hidden })
