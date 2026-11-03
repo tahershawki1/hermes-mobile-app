@@ -30,7 +30,7 @@ module.exports = async t => {
       const u = route.request().url()
       asked.push(u)
       if (u.includes('/releases/latest'))
-        return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ tag_name: tag, assets: [{ name: 'hermes-mobile.apk', browser_download_url: `https://github.com/omarqaterge/hermes-mobile-app/releases/download/${tag}/hermes-mobile.apk` }] }) })
+        return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ tag_name: tag, assets: [{ name: 'Hermes-Taher-0.8.70.apk', browser_download_url: `https://github.com/tahershawki1/hermes-mobile-app/releases/download/${tag}/hermes-mobile.apk` }] }) })
       if (u.includes('/contents/CHANGELOG.md') && changelog)
         return route.fulfill({ status: 200, contentType: 'text/plain', headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' }, body: LOG })
       return route.fulfill({ status: 404, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' }, body: '' })
@@ -62,7 +62,7 @@ module.exports = async t => {
     check((await sheet.locator('strong', { hasText: 'Newest thing.' }).count()) === 1, "what's new: the notes are rendered as Markdown")
     await sheet.locator('button', { hasText: 'Update to 0.8.70' }).click()
     await sheet.waitFor({ state: 'detached', timeout: 3000 })
-    check(JSON.stringify(await pg.evaluate(() => window.__installed)) === '["https://github.com/omarqaterge/hermes-mobile-app/releases/download/v0.8.70/hermes-mobile.apk"]', "what's new: Update in the sheet starts the download")
+    check(JSON.stringify(await pg.evaluate(() => window.__installed)) === '["https://github.com/tahershawki1/hermes-mobile-app/releases/download/v0.8.70/hermes-mobile.apk"]', "what's new: Update in the sheet starts the download")
     await pg.close()
   }
   {
