@@ -33,3 +33,5 @@ The release APK must always be signed with the same key, or phones cannot update
 2. Installs `zstd`; runs `tools/build-image.sh image-out`; checks `sha256sum -c`.
 3. Computes the file name (`build-image.sh --name`) and the release tag `hermes-image-<first 12 of the pin>`.
 4. If `publish` is off: uploads the image, its `.sha256` and `build.log` as a workflow artifact (7 days). If on: creates the release `hermes-image-<pin12>` when missing (prerelease, `--latest=false`, so the app's update check and the APK download keep pointing at the app release), then uploads the image first and the `.sha256` second (a half-replaced pair fails `bootstrap.sh`'s hash check, which falls back to a normal install).
+
+Additional GitHub Actions workflows: `build-taher.yml` builds the Taher app; `release-taher.yml` publishes Taher releases; `watch-upstream.yml` checks upstream changes.
