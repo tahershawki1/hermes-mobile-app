@@ -920,9 +920,10 @@ function AppsStep({ n }: { n: NativeSetup }) {
       <div className="flow-card-title">Get the helper apps</div>
       <div className="setup-help">
         Hermes runs inside Termux and uses these apps to reach your phone. Hermes Mobile downloads them (Termux from F-Droid,
-        Shizuku from GitHub) and Android asks you to tap <b>Install</b> for each one.
+        Shizuku from GitHub) without opening a browser. Android asks you to tap <b>Install</b> for each one. Return to Hermes Mobile after each prompt.
         {n.canInstall === false && <> First Android asks you to allow Hermes Mobile to install apps: turn the switch on, then come back.</>}
       </div>
+      <div className="setup-help">Tap <b>Install all</b>. Allow Hermes Mobile to install apps when Android asks, then confirm each <b>Install</b> prompt. Return here after each installation. If you dismiss a prompt, tap <b>Retry</b>.</div>
       <ul className="setup-list app-list">
         {HELPERS.map(h => {
           const has = h.has(n)
