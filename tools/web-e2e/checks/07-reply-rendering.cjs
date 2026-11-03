@@ -296,7 +296,7 @@ module.exports = async t => {
     if (await out.count()) {
       // The tool card may still be collapsed after expanding its folded run.
       const link = out.last()
-      const card = link.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " tool-card ")]')
+      const card = link.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " tool ")]')
       const head = card.locator('.tool-head')
       if (await head.count() && !(await link.isVisible())) await head.click()
       await link.scrollIntoViewIfNeeded()
