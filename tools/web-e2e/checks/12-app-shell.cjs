@@ -304,7 +304,13 @@ module.exports = async t => {
 
   // ── setup check with the Android checks: ✗ items have buttons that ask the shell to fix them ──
   await np.evaluate(() => (window.__setup = { termux: true, runCommand: false, notifications: true, batteryApp: false, batteryTermux: true, startError: '' }))
+  // Back from a conversation now opens the in-app chat home, rather than exiting Android.
   await np.evaluate(() => window.hermesBack && window.hermesBack())
+  await np.locator('.hm-chat-home').waitFor({ timeout: 5000 })
+  check((await np.locator('.hm-chat-home').count()) === 1, 'Android Back opens the conversations home')
+  // Select the existing chat before exercising chat-header controls, which are intentionally hidden by home.
+  await np.locator('.hm-chat-home .session-row').first().click()
+  await np.locator('.hm-chat-home').waitFor({ state: 'detached', timeout: 5000 })
   await np.locator('.conn-dot').click()
   await np.getByRole('button', { name: 'Setup check' }).click()
   await np.locator('.setup-hero-title', { hasText: '2 things to fix' }).waitFor({ timeout: 5000 }).then(() => check(true, 'native: two failing checks counted'), () => check(false, 'native: two failing checks counted'))
