@@ -3,7 +3,7 @@ name: Build Hermes Taher APK
 on:
   workflow_dispatch:
   push:
-    branches: [development, main]
+    branches: [main]
     paths:
       - 'android/**'
       - 'web/**'
@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   apk:
@@ -65,13 +65,24 @@ jobs:
             exit 1
           fi
           HM_APP_VARIANT=taher HM_SKIP_WEB_BUILD=1 \
-            VERSION_NAME="1.0.15" VERSION_CODE=100015 android/build.sh
+            VERSION_NAME="1.1.${GITHUB_RUN_NUMBER}" VERSION_CODE="$((110000 + GITHUB_RUN_NUMBER))" android/build.sh
           if [ -n "${KEYSTORE:-}" ]; then rm -f "$KEYSTORE"; fi
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/build/hermes-mobile.apk | head -n 4
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs android/build/hermes-mobile.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: hermes-taher-1.0.15-apk-run-${{ github.run_number }}
+          name: hermes-taher-1.1-${{ github.run_number }}
           path: android/build/hermes-mobile.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish verified APK to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="1.1.${GITHUB_RUN_NUMBER}"
+          tag="taher-v${version}"
+          cp android/build/hermes-mobile.apk "Hermes-Taher-${version}.apk"
+          sha256sum "Hermes-Taher-${version}.apk" > "Hermes-Taher-${version}.apk.sha256"
+          gh release create "$tag" "Hermes-Taher-${version}.apk" "Hermes-Taher-${version}.apk.sha256" --target "$GITHUB_SHA" --title "Hermes Taher ${version}" --notes "Signed and verified Hermes Taher Android update."
