@@ -429,7 +429,7 @@ function SessionMenu({
 }
 
 // ── the list ─────────────────────────────────────────────────
-export function SessionList({ query }: { query: string }) {
+export function SessionList({ query, onSelect }: { query: string; onSelect?: () => void }) {
   const sessions = useStore(s => s.sessions)
   const loading = useStore(s => s.sessionsLoading)
   const profile = useStore(s => s.profile)
@@ -554,7 +554,7 @@ export function SessionList({ query }: { query: string }) {
         archived={!list}
         onOpen={() => {
           haptic()
-          resumeSession(s.id).catch(e => toast(errText(e), 'error'))
+          resumeSession(s.id).then(() => onSelect?.()).catch(e => toast(errText(e), 'error'))
         }}
         onRight={a => archive(s.id, a === 'archive')}
         onDelete={() => remove(s)}
@@ -676,7 +676,7 @@ export function SessionList({ query }: { query: string }) {
                 haptic()
                 const { terms, plain } = parseSnippet(h.snippet)
                 resumeSession(h.id)
-                  .then(() => setState({ jump: { storedId: h.id, terms, snippet: plain } }))
+                  .then(() => { setState({ jump: { storedId: h.id, terms, snippet: plain } }); onSelect?.() })
                   .catch(e => toast(errText(e), 'error'))
               }}
             >

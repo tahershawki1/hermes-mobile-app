@@ -14,6 +14,7 @@ import { Scrubber, paintRail } from './components/Scrubber'
 import { SCRUB_MIN, railPosition, readLine, userMarks } from './scrub'
 import { TtsPlayer } from './components/TtsPlayer'
 import { Drawer } from './components/Drawer'
+import { ChatHome } from './components/ChatHome'
 import { InlineApproval, RequestSheet } from './components/RequestSheet'
 import { ChatMenuSheet, CommandsSheet, DraftMenuSheet, GoalSheet, ModelSheet, ContextSheet, RollbackSheet, SessionActionsSheet, StatusSheet, useCompress } from './components/Sheets'
 import { bannerItems, startActivityPolling } from './activity'
@@ -67,10 +68,13 @@ window.hermesBack = () => {
     return true
   }
   if (s.screen) {
+    if (s.screen === 'chats') return false // Android may leave the app only from its home screen
     closeScreen()
     return true
   }
-  return false
+  // A conversation is never the exit point: Back returns to the in-app session list.
+  setState({ screen: 'chats', drawer: false })
+  return true
 }
 window.hermesOpenSession = (id: string, draft?: string) => openSessionFromNotification(id, draft)
 // Called by the shell when the app returns to the foreground.
@@ -877,6 +881,7 @@ export function App() {
       {screen === 'setup' && <SetupScreen />}
       {screen === 'welcome' && <SetupFlow />}
       {screen === 'hub' && <HubScreen />}
+      {screen === 'chats' && <ChatHome />}
       <Drawer />
       {sheet === 'model' && <ModelSheet />}
       {sheet === 'commands' && (
