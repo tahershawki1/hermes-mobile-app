@@ -183,14 +183,11 @@ function Reasoning({ text, live }: { text: string; live: boolean }) {
   const [open, setOpen] = useState(false)
   if (!text.trim()) return null
   return (
-    <div className={`reasoning${open ? ' open' : ''}`}>
-      <button className="reasoning-head" onClick={() => setOpen(o => !o)}>
-        <span className="reasoning-dot">{live ? <Spinner small /> : <BrainIcon />}</span>
-        {live ? 'Thinking…' : 'Thought process'}
-        <span className="chev"><Chevron open={open} /></span>
+    <div className={`reasoning${live ? ' live' : ''}${open ? ' open' : ''}`}>
+      <button className="reasoning-head" aria-label={live ? 'Thinking…' : 'Thought process'} aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        {live ? <HermesPresence state="thinking" /> : <><span className="reasoning-dot"><BrainIcon /></span>Thought process<span className="chev"><Chevron open={open} /></span></>}
       </button>
       <Collapse open={open}><div className="reasoning-body"><Linked text={text} /></div></Collapse>
-      {!open && live ? <div className="reasoning-peek">{text.slice(-160)}</div> : null}
     </div>
   )
 }

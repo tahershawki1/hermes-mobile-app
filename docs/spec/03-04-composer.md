@@ -20,7 +20,7 @@ The composer sits at the bottom of the chat (`web/src/components/Composer.tsx` `
 | Dictate button (aria-label Dictate) | Microphone icon. | Starts dictation (below). | none | Same conditions as the Live button. Disabled while busy or offline. |
 | Stop dictation (aria-label Stop dictation) | Microphone with a stop square. | Stops listening. | none | Shown while listening. |
 | Stop button (aria-label Stop) | Stop square. | Interrupts the running turn (`session.interrupt`). | none | Shown while a reply runs and the text box is empty. |
-| Send button (aria-label Send) | Paper-plane icon. The label is "Steer" while a reply runs and "Send when back online" while offline. | Sends. | none | Disabled when the text is blank, a send is in flight, or a chat is opening. |
+| Send button (aria-label Send) | Paper-plane icon. The label is "Steer" while a reply runs and "Send when back online" while offline. | Sends. | none | Disabled when text, quotes and attachments are all empty, an upload or send is in flight, or a chat is opening. Attachments alone show Send instead of the voice buttons. |
 
 **Data:** `queue.ts` (`hm.queue.v1`), `drafts.ts` (`hm.drafts.v1`, legacy `hm.draft`), `stash.ts` (`hm.stash.v1`), `recent.ts` (`hm.recent.v1.<profile>`), `commands.ts` (`hm.cmds.v1.<profile>`), outbox (`hm.outbox.v1`); RPCs `prompt.submit`, `session.steer`, `session.interrupt`, `slash.exec`, `command.dispatch`, `commands.catalog`, `image.attach_bytes`, `image.attach`, `image.detach`, `file.attach`, `config.set`; dashboard `GET /api/skills`.
 **Rules:** attaching and the camera use a plain `<input type="file">` (the Android shell supplies the picker and camera), so there is no custom file browser.
@@ -29,7 +29,7 @@ The composer sits at the bottom of the chat (`web/src/components/Composer.tsx` `
 
 One slot, six faces, decided in this order:
 
-1. Text box empty, no reply running, not listening, and the phone app has voice input: the Live conversation button and the Dictate button (side by side).
+1. Text box empty, no quotes or attachments (including uploads), no reply running, not listening, and the phone app has voice input: the Live conversation button and the Dictate button (side by side).
 2. Listening: Stop dictation.
 3. A reply is running and the box is empty: Stop.
 4. A reply is running and the box (or the quotes) has content: two buttons. A small pill `Steer` (aria-label `Steer`) sends it into the running turn now, like Send used to while running. The round arrow with a clock badge (aria-label `Queue`) puts it in the queue (below). Queue is disabled, with the label `Queue (remove attachments first)`, while photos or files are attached (Hermes would attach them to whatever is sent next); with the label `Queue (full)` when the chat already has 10 queued messages; and while the text starts with `/` (slash commands are never queued; Steer runs them as before). Ctrl/Cmd+Enter in the box queues while a reply runs.
@@ -39,7 +39,7 @@ One slot, six faces, decided in this order:
 
 `send()`:
 
-1. Ignores blank text unless there is at least one quote chip. The text sent is `withQuotes(quotes, text)` (`web/src/quote.ts`): each quote as a Markdown blockquote (`> ` before every line), a blank line between quotes, a blank line, then the typed text. A text starting with `/` is sent as it is and keeps the quotes.
+1. Ignores blank text unless there is at least one quote chip or attachment; waits until uploads finish. The text sent is `withQuotes(quotes, text)` (`web/src/quote.ts`): each quote as a Markdown blockquote (`> ` before every line), a blank line between quotes, a blank line, then the typed text. A text starting with `/` is sent as it is and keeps the quotes.
 2. If Hermes is not connected: queues that text in the outbox and clears the box and the quotes (below).
 3. Otherwise clears the box and the quotes, calls `sendPrompt`, and on failure puts the text and the quotes back and shows an error toast.
 
@@ -119,3 +119,5 @@ The Dictate button calls the shell's `startListening` bridge method. The compose
 Launcher shortcuts call `window.hermesShortcut(kind)`: New chat, or `live` which also starts Live mode (toast "Live mode needs the phone app’s voice features" when voice is missing, "Hermes is offline" after 30 s).
 
 ---
+
+Attachment-only sends preserve an empty visible caption. A document submits its `@file:` reference; images use the transport instruction "Please review the attached images." so Hermes receives a nonempty prompt with its queued images.

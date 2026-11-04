@@ -3945,28 +3945,13 @@ img.inline-frame { display: block; max-width: 100%; max-height: 60vh; margin: 0 
 .hm-working-presence {
   align-self: flex-start;
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  max-width: calc(100% - 16px);
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 18px 18px 18px 5px;
-  background: var(--surface);
-  color: var(--dim);
-  font-size: 0.82rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
-.hm-typing { display: inline-flex; align-items: center; gap: 4px; padding-left: 2px; }
-.hm-typing i {
-  display: block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-  opacity: 0.35;
-  animation: hm-type 1.2s ease-in-out infinite;
-}
-.hm-typing i:nth-child(2) { animation-delay: 0.16s; }
-.hm-typing i:nth-child(3) { animation-delay: 0.32s; }
+.hm-working-presence .hm-presence, .reasoning-head .hm-presence { width: 22px; height: 22px; }
+.reasoning.live:not(.open) { border: 0; background: transparent; }
+.reasoning.live .reasoning-head { width: auto; padding: 0; }
 @keyframes hm-hello {
   from { opacity: 0.2; scale: 0.94; }
   to { opacity: 1; scale: 1; }

@@ -26,9 +26,7 @@ export function HermesPresence({ state = 'idle', size = 'small' }: {
 export function WorkingPresence() {
   return (
     <div className="hm-working-presence" role="status" aria-label="Hermes is working">
-      <HermesPresence state="working" />
-      <span>Hermes is on it</span>
-      <span className="hm-typing" aria-hidden="true"><i /><i /><i /></span>
+      <HermesPresence state="thinking" />
     </div>
   )
 }

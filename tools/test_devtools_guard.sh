@@ -21,9 +21,10 @@ KEYSTORE=/nonexistent HM_DEVTOOLS=0 ANDROID_HOME=/nonexistent android/build.sh >
 out=$(env -u KEYSTORE HM_DEVTOOLS=1 ANDROID_HOME=/nonexistent android/build.sh 2>&1); rc=$?
 case "$out" in *"refusing to build"*) fail "refused without KEYSTORE" ;; *) pass "HM_DEVTOOLS alone is not refused" ;; esac
 
-grep -q 'hm_devtools' .github/workflows/release.yml \
-  && pass "release.yml checks the APK for hm_devtools" || fail "release.yml has no hm_devtools check"
-[ "$(grep -c 'HM_DEVTOOLS=' .github/workflows/release.yml)" = 0 ] && pass "release.yml never sets HM_DEVTOOLS" || fail "release.yml sets HM_DEVTOOLS"
+workflow=.github/workflows/build-taher.yml
+grep -q 'hm_devtools' "$workflow" \
+  && pass "production workflow checks the APK for hm_devtools" || fail "production workflow has no hm_devtools check"
+[ "$(grep -c 'HM_DEVTOOLS=' "$workflow")" = 0 ] && pass "production workflow never sets HM_DEVTOOLS" || fail "production workflow sets HM_DEVTOOLS"
 
 [ "$fails" = 0 ] && { echo "ALL PASSED"; exit 0; }
 echo "$fails FAILED"; exit 1

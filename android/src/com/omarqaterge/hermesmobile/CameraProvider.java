@@ -18,7 +18,6 @@ import java.io.FileNotFoundException;
  * the other app gets access through a one-off URI grant.
  */
 public class CameraProvider extends ContentProvider {
-    static final String AUTHORITY = "com.omarqaterge.hermesmobile.camera";
     static final String SHARED = "share-\\d{1,20}\\.(jpg|jpeg|png|webp|gif)";
 
     static File dir(android.content.Context c) {
@@ -33,8 +32,8 @@ public class CameraProvider extends ContentProvider {
         return d;
     }
 
-    static Uri uriFor(File f) {
-        return Uri.parse("content://" + AUTHORITY + "/" + f.getName());
+    static Uri uriFor(android.content.Context context, File f) {
+        return Uri.parse("content://" + context.getPackageName() + ".camera/" + f.getName());
     }
 
     File fileFor(Uri uri) throws FileNotFoundException {

@@ -14,9 +14,6 @@
 .hm-face-live.failed .hm-presence-face { stroke: var(--err); }
 @keyframes hm-eye-look { 0%, 20%, 100% { transform: translateX(0); } 40%, 55% { transform: translateX(3px); } 70%, 85% { transform: translateX(-3px); } }
 @keyframes hm-face-pulse { 0%,100% { opacity: .4; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.07); } }
-.hm-live-summary { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 6px 0; }
-.hm-live-summary-text { display: flex; flex-direction: column; min-width: 0; gap: 3px; font-size: .78rem; }
-.hm-live-summary-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hm-live-task.running .hm-live-task-icon { color: #f3c34f; text-shadow: 0 0 9px #f3c34f; animation: hm-task-glow 1.6s ease-in-out infinite; }
 .hm-live-task.success .hm-live-task-icon { color: var(--ok); }
 .hm-live-task.failed .hm-live-task-icon { color: var(--err); }
