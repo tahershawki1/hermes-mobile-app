@@ -3,7 +3,7 @@ import { remoteDebugStrip, useRemoteDebug } from './remotedebug'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { afterChatOpens, compressChat, connect, errText, fmtCtx, openSessionFromNotification, reconnectNow } from './gateway'
 import { closeScreen, getState, setState, toast, useStore, type ChatItem, type Todo } from './store'
-import { ItemView, ToolRunHead } from './components/ChatItems'
+import { ItemView, TerminalTranscript, ToolRunHead } from './components/ChatItems'
 import { foldMap } from './fold'
 import { turnChanges } from './changes'
 import { TurnChangesCard } from './components/Changes'
@@ -752,8 +752,14 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
         return (
           <div key={it.id} className="tool-run-wrap">
             {mark}
-            <ToolRunHead id={it.id} run={f.head} open={f.open} onToggle={toggleRun} />
-            {!f.hidden && <ItemView item={it} actions={false} busy={running || previewing} />}
+            {f.head.names.length === 1 && f.head.names[0] === 'terminal' ? (
+              !f.hidden && <TerminalTranscript items={items.slice(f.head.start, f.head.end).filter((x): x is Extract<ChatItem, { kind: 'tool' }> => x.kind === 'tool')} />
+            ) : (
+              <>
+                <ToolRunHead id={it.id} run={f.head} open={f.open} onToggle={toggleRun} />
+                {!f.hidden && <ItemView item={it} actions={false} busy={running || previewing} />}
+              </>
+            )}
             {card && <TurnChangesCard changes={card} />}
           </div>
         )

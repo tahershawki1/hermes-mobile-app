@@ -1407,6 +1407,15 @@ client.onEvent((ev: GatewayEvent) => {
   }
 
   switch (type) {
+    case 'terminal.output': {
+      const id = String(payload.tool_id || '')
+      const chunk = String(payload.chunk || '')
+      if (!id || !chunk) break
+      patchItem(id, it => it.kind === 'tool' && it.name === 'terminal' && it.status === 'running'
+        ? { ...it, liveOutput: (it.liveOutput || '').concat(chunk).slice(-20_000) }
+        : it)
+      break
+    }
     case 'message.start':
       stream = { chars: 0, ms: 0, last: 0, total: 0, start: performance.now() }
       updateActive(a => ({ running: true, tps: null, turnStart: a.turnStart ?? Date.now() })) // more than one message.start per turn: keep the first

@@ -1,5 +1,14 @@
 # Manual tests
 
+## Live terminal transcript (browser verified; phone check pending)
+
+- [ ] **One command, live output.** Run a foreground command that prints several lines with a pause between them.
+      Expected: output appears in the chat before the command ends, and the panel shows the final exit status.
+- [ ] **Several commands and a non-terminal tool.** Ask Hermes for a task that uses multiple terminal commands plus a file/search tool.
+      Expected: terminal calls share one transcript; the other tool keeps its separate card; outputs stay with their commands.
+- [ ] **Long output and reconnect.** Run a verbose command, leave and reopen the chat while it works.
+      Expected: the visible transcript stays bounded; the final tool result remains available after the turn ends.
+
 Checks that need a person, a voice, extra hardware or another computer, so they can't be run over adb.
 Tick an item off (or note what went wrong) once it's done; the status per feature is in `improvements.md`.
 

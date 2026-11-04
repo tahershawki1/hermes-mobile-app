@@ -1,0 +1,1 @@
+- **Watch terminal work live.** Consecutive terminal commands now share one compact chat panel, with redacted command output appearing while local commands run. Other tools keep their own cards. Verified in the browser mock; not verified on a phone.

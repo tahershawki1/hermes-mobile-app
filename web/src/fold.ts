@@ -30,13 +30,19 @@ export function toolRuns(items: ChatItem[]): ToolRun[] {
     }
     let j = i
     let last = i
+    const terminalOnly = (items[i] as Extract<ChatItem, { kind: 'tool' }>).name === 'terminal'
     while (j < items.length && inRun(items[j])) {
-      if (items[j].kind === 'tool') last = j
+      const current = items[j]
+      if (current.kind === 'tool') {
+        // Keep terminal transcripts separate from ordinary tool cards, even inside a longer tool run.
+        if ((current.name === 'terminal') !== terminalOnly) break
+        last = j
+      }
       j++
     }
     const end = last + 1 // a reasoning-only reply after the last call belongs to the next text, not the run
     const tools = items.slice(i, end).filter((x): x is Extract<ChatItem, { kind: 'tool' }> => x.kind === 'tool')
-    if (tools.length >= FOLD_MIN) {
+    if (tools.length >= FOLD_MIN || tools.length > 0 && tools.every(t => t.name === 'terminal')) {
       runs.push({
         start: i,
         end,
@@ -61,8 +67,9 @@ export function foldMap(items: ChatItem[], open: ReadonlySet<string>): Map<numbe
   for (const r of toolRuns(items)) {
     // Keep active commands visible even when the run would normally collapse.
     const isOpen = open.has(items[r.start].id)
+    const terminalOnly = r.names.length === 1 && r.names[0] === 'terminal'
     for (let k = r.start; k < r.end; k++) {
-      const hidden = !isOpen && !(r.running && (k === r.start || k === r.end - 1))
+      const hidden = !isOpen && (terminalOnly ? k !== r.start : !(r.running && (k === r.start || k === r.end - 1)))
       if (k === r.start) out.set(k, { head: r, open: isOpen || r.running, hidden })
       else if (hidden) out.set(k, { hidden: true })
     }

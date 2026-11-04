@@ -148,6 +148,33 @@ export const ToolCard = memo(function ToolCard({ item }: { item: Extract<ChatIte
   )
 })
 
+/** One compact, live transcript for a run of terminal calls. */
+export const TerminalTranscript = memo(function TerminalTranscript({ items }: { items: Extract<ChatItem, { kind: 'tool' }>[] }) {
+  const running = items.some(i => i.status === 'running' || i.status === 'generating')
+  const errors = items.filter(i => i.status === 'error').length
+  const output = items.map(i => {
+    const command = typeof i.args?.command === 'string' ? i.args.command : i.context || 'Terminal command'
+    const final = i.resultText ? formatOutput(i.resultText) : null
+    const text = i.status === 'running'
+      ? i.liveOutput || 'Waiting for output…'
+      : final?.text || i.liveOutput || (final?.meta ? `[${final.meta}]` : '')
+    return `$ ${command}${text ? `\n${text}` : ''}`
+  }).join('\n\n')
+  const visible = output.length > 100_000 ? `… earlier output clipped …\n${output.slice(-100_000)}` : output
+  return (
+    <section className={`terminal-transcript${running ? ' running' : ''}`} aria-label="Terminal activity">
+      <div className="terminal-transcript-head">
+        <span className="tool-icon" aria-hidden="true">⌘</span>
+        <span>Terminal</span>
+        <span className="terminal-transcript-state">
+          {running ? <><Spinner /> Running</> : errors ? `✕ ${errors}` : '✓'}
+        </span>
+      </div>
+      <pre className="terminal-transcript-output" role="log" aria-live="off">{visible}</pre>
+    </section>
+  )
+})
+
 /** The line a folded run of tool calls shows: icons of the tools used, "Ran 7 tools · 42s", a chevron. */
 export const ToolRunHead = memo(function ToolRunHead({ id, run, open, onToggle }: { id: string; run: ToolRun; open: boolean; onToggle: (id: string) => void }) {
   return (
