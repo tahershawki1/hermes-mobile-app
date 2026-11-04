@@ -12,6 +12,7 @@ import { DiffView, looksLikeDiff } from './Diff'
 import { fmtDuration, formatOutput, memoryDiff, phoneAppLabel, plainText } from '../text'
 import { runLabel, type ToolRun } from '../fold'
 import { Spinner } from './Spinner'
+import { HermesPresence } from './HermesPresence'
 import { Linked } from './Linked'
 
 // Stored outputs fetched for cards restored from history (resumed transcripts omit them).
@@ -450,6 +451,7 @@ function AssistantMsg({ item, actions, busy }: { item: Extract<ChatItem, { kind:
   const time = useTimeTap(item.streaming ? undefined : item.at)
   return (
         <div className="msg assistant" onClick={time.toggle}>
+          <div className="hm-assistant-byline"><HermesPresence state={item.streaming ? 'thinking' : 'idle'} /><span>Hermes</span>{item.streaming && <span className="hm-replying">Replying</span>}</div>
           <Reasoning text={item.reasoning} live={item.streaming && !item.text} />
           {item.text && <Markdown text={item.text} streaming={item.streaming} interactive />}
           {item.streaming && item.text && <span className="caret" />}
