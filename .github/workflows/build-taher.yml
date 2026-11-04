@@ -3,7 +3,7 @@ name: Build Hermes Taher APK
 on:
   workflow_dispatch:
   push:
-    branches: [development]
+    branches: [development, main]
     paths:
       - 'android/**'
       - 'web/**'
@@ -65,13 +65,13 @@ jobs:
             exit 1
           fi
           HM_APP_VARIANT=taher HM_SKIP_WEB_BUILD=1 \
-            VERSION_NAME="1.0.0" VERSION_CODE=100000 android/build.sh
+            VERSION_NAME="1.0.15" VERSION_CODE=100015 android/build.sh
           if [ -n "${KEYSTORE:-}" ]; then rm -f "$KEYSTORE"; fi
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/build/hermes-mobile.apk | head -n 4
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs android/build/hermes-mobile.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: hermes-taher-apk
+          name: hermes-taher-1.0.15-apk
           path: android/build/hermes-mobile.apk
           if-no-files-found: error
           retention-days: 14
