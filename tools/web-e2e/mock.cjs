@@ -1005,14 +1005,14 @@ wss.on('connection', ws => {
           return
         }
         if (/^use tools$/.test(params.text)) {
-          // Four consecutive terminal calls, with reasoning between two of them, then the answer: the app folds them into one live transcript.
+          // Four consecutive non-terminal tool calls, with reasoning between two of them, then the answer: the app folds them into one line.
           let t = 50
           // Each result is the parsed JSON of the tool's output in `result` (shapes of the real tools), never `result_text`.
           const calls = [
-            ['terminal', { command: 'echo 0' }, { output: 'out 0', exit_code: 0, error: null }],
-            ['terminal', { command: 'echo 1' }, { output: 'out 1', exit_code: 0, error: null }],
-            ['terminal', { command: 'echo 2' }, { output: 'out 2', exit_code: 0, error: null }],
-            ['terminal', { command: 'echo 3' }, { output: 'out 3', exit_code: 0, error: null }]
+            ['read_file', { path: '/root/step-0.txt' }, { content: '1|out 0', total_lines: 1, file_size: 6, truncated: false, is_binary: false, is_image: false, not_found: false }],
+            ['search_files', { pattern: 'out 1', path: '/root' }, { total_count: 1, matches: [{ path: '/root/step-1.txt', line: 1, content: 'out 1' }] }],
+            ['read_file', { path: '/root/step-2.txt' }, { content: '1|out 2', total_lines: 1, file_size: 6, truncated: false, is_binary: false, is_image: false, not_found: false }],
+            ['search_files', { pattern: 'out 3', path: '/root' }, { total_count: 1, matches: [{ path: '/root/step-3.txt', line: 1, content: 'out 3' }] }]
           ]
           for (const [i, [name, args, result]] of calls.entries()) {
             later((t += 40), () => event('tool.start', sid, { tool_id: `call_${i}`, name, context: `step ${i}`, args }))

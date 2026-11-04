@@ -169,7 +169,7 @@ describe('tool runs', () => {
     const runs = toolRuns(items)
     expect(runs).toHaveLength(2)
     expect(runs[0]).toMatchObject({ start: 1, end: 2, tools: 1, secs: 2, names: ['terminal'] })
-    expect(runs[1]).toMatchObject({ start: 3, end: 4, tools: 1, secs: 2, names: ['terminal'] })
+    expect(runs[1]).toMatchObject({ start: 4, end: 5, tools: 1, secs: 2, names: ['terminal'] })
     expect(toolRuns([user, tool('t1'), tool('t2'), say('a')])).toHaveLength(1)
     expect(runLabel(runs[0])).toBe('Ran 1 tool · 2s')
   })
@@ -190,7 +190,7 @@ describe('tool runs', () => {
     const m = foldMap(items, new Set())
     expect(runLabel(toolRuns(items)[0])).toBe('Running 3 tools…')
     expect(m.get(2)).toEqual({ hidden: true })
-    expect(m.has(3)).toBe(false)
+    expect(m.get(3)).toEqual({ hidden: true })
   })
 })
 
