@@ -164,19 +164,20 @@ describe('tool runs', () => {
   const say = (id: string, text = 'hi'): ChatItem => ({ kind: 'assistant', id, text, reasoning: '', streaming: false })
   const user: ChatItem = { kind: 'user', id: 'u', text: 'go' }
 
-  test('folds 3+ calls with reasoning between them, not 2', () => {
+  test('keeps terminal transcripts separate from non-terminal tools', () => {
     const items = [user, tool('t1'), think('k1'), tool('r2'), tool('t3'), think('k2'), say('a')]
     const runs = toolRuns(items)
-    expect(runs).toHaveLength(1)
-    expect(runs[0]).toMatchObject({ start: 1, end: 5, tools: 3, secs: 6, names: ['terminal', 'read_file'] })
-    expect(toolRuns([user, tool('t1'), tool('t2'), say('a')])).toHaveLength(0)
-    expect(runLabel(runs[0])).toBe('Ran 3 tools · 6s')
+    expect(runs).toHaveLength(2)
+    expect(runs[0]).toMatchObject({ start: 1, end: 2, tools: 1, secs: 2, names: ['terminal'] })
+    expect(runs[1]).toMatchObject({ start: 3, end: 4, tools: 1, secs: 2, names: ['terminal'] })
+    expect(toolRuns([user, tool('t1'), tool('t2'), say('a')])).toHaveLength(1)
+    expect(runLabel(runs[0])).toBe('Ran 1 tool · 2s')
   })
 
   test('hides all but the header when closed, nothing when open', () => {
     const items = [user, tool('t1'), tool('t2'), tool('t3'), say('a')]
     const m = foldMap(items, new Set())
-    expect(m.get(1)).toMatchObject({ open: false, hidden: true })
+    expect(m.get(1)).toMatchObject({ open: false, hidden: false })
     expect(m.get(2)).toEqual({ hidden: true })
     expect(m.get(4)).toBeUndefined()
     const o = foldMap(items, new Set(['t1']))

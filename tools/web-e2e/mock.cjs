@@ -1005,13 +1005,13 @@ wss.on('connection', ws => {
           return
         }
         if (/^use tools$/.test(params.text)) {
-          // Four tool calls (with reasoning between two of them), then the answer: the app folds them into one line.
+          // Four consecutive terminal calls, with reasoning between two of them, then the answer: the app folds them into one live transcript.
           let t = 50
           // Each result is the parsed JSON of the tool's output in `result` (shapes of the real tools), never `result_text`.
           const calls = [
             ['terminal', { command: 'echo 0' }, { output: 'out 0', exit_code: 0, error: null }],
-            ['read_file', { path: '/root/note.txt' }, { content: '1|out 1', total_lines: 1, file_size: 7, truncated: false, is_binary: false, is_image: false, not_found: false }],
-            ['search_files', { pattern: 'out', path: '/root' }, { total_count: 1, matches: [{ path: '/root/note.txt', line: 1, content: 'out 2' }] }],
+            ['terminal', { command: 'echo 1' }, { output: 'out 1', exit_code: 0, error: null }],
+            ['terminal', { command: 'echo 2' }, { output: 'out 2', exit_code: 0, error: null }],
             ['terminal', { command: 'echo 3' }, { output: 'out 3', exit_code: 0, error: null }]
           ]
           for (const [i, [name, args, result]] of calls.entries()) {
