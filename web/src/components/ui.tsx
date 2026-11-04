@@ -1,6 +1,6 @@
 // The app's own form controls. Nothing here uses the browser/Android defaults (no <select>, no native
 // range or checkbox): every picker, slider and switch is drawn in the app's visual language.
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { haptic } from '../bridge'
 import { useBackHandler } from '../backstack'
 import { useSheetDrag } from './useSheetDrag'
@@ -74,12 +74,12 @@ export function Row({
 
 // ── switch ───────────────────────────────────────────────────
 
-export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+export function Toggle({ on, onChange, label, labelId }: { on: boolean; onChange: (v: boolean) => void; label: string; labelId?: string }) {
   return (
     <button
       role="switch"
       aria-checked={on}
-      aria-label={label}
+      {...(labelId ? { 'aria-labelledby': labelId } : { 'aria-label': label })}
       className={`switch${on ? ' on' : ''}`}
       onClick={e => {
         e.stopPropagation()
@@ -94,14 +94,15 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
 
 /** A Row whose whole width toggles a switch. */
 export function ToggleRow({ icon, tone, title, sub, on, onChange }: { icon?: ReactNode; tone?: Tone; title: ReactNode; sub?: ReactNode; on: boolean; onChange: (v: boolean) => void }) {
+  const titleId = useId()
   return (
-    <div className="set-row" role="presentation" onClick={() => { haptic(); onChange(!on) }}>
+    <div className="set-row toggle-row" role="group" aria-labelledby={titleId} onClick={() => { haptic(); onChange(!on) }}>
       {icon != null && <IconChip tone={tone}>{icon}</IconChip>}
       <span className="set-text">
-        <span className="set-title">{title}</span>
+        <span className="set-title" id={titleId}>{title}</span>
         {sub != null && <span className="set-sub">{sub}</span>}
       </span>
-      <Toggle on={on} onChange={onChange} label={typeof title === 'string' ? title : 'Toggle'} />
+      <Toggle on={on} onChange={onChange} label="Toggle" labelId={titleId} />
     </div>
   )
 }
@@ -134,13 +135,15 @@ export function PickerSheet({ title, options, value, onPick, onClose }: { title:
       <div className="sheet picker" role="dialog" ref={drag.ref} {...drag.bind} onClick={e => e.stopPropagation()}>
         <div className="sheet-grip" />
         <div className="sheet-title">{title}</div>
-        <div className="picker-list">
+        <div className="picker-list" role="listbox" aria-label={title}>
           {groups.map(([g, list]) => (
             <div key={g || '_'}>
               {g && <div className="picker-group">{g}</div>}
               {list.map(o => (
                 <button
                   key={o.value}
+                  role="option"
+                  aria-selected={o.value === value}
                   className={`picker-opt${o.value === value ? ' on' : ''}`}
                   onClick={() => {
                     haptic()
@@ -206,9 +209,9 @@ export function SliderRow({ icon, tone, title, value, min, max, step, format, on
 
 export function Segmented<T extends string | number>({ options, value, onChange }: { options: Array<{ value: T; label: ReactNode }>; value: T; onChange: (v: T) => void }) {
   return (
-    <div className="seg">
+    <div className="seg" role="group" aria-label="Options">
       {options.map(o => (
-        <button key={String(o.value)} className={o.value === value ? 'on' : ''} onClick={() => { haptic(); onChange(o.value) }}>
+        <button key={String(o.value)} className={o.value === value ? 'on' : ''} aria-pressed={o.value === value} onClick={() => { haptic(); onChange(o.value) }}>
           {o.label}
         </button>
       ))}

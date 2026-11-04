@@ -2515,7 +2515,7 @@ input[type='range'] { accent-color: var(--accent, #d9a441); }
   min-height: 52px; background: none; border: 0; color: inherit; font: inherit;
 }
 .set-row + .set-row, .set-row + div .set-row, .set-card > div + .set-row { border-top: 1px solid var(--border); }
-button.set-row:active, .set-row[role='presentation']:active { background: var(--press); }
+button.set-row:active, .toggle-row:active { background: var(--press); }
 .set-row:disabled { opacity: 0.5; }
 .set-icon {
   width: 32px; height: 32px; border-radius: 9px; flex: none; display: grid; place-items: center; font-size: 17px;

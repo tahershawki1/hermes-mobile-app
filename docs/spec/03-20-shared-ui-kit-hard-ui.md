@@ -9,13 +9,13 @@
 | `Row` | One row of a section: optional icon chip, title, sub line, value, trailing control, › | With `onClick` it is a button (haptic on tap, can be `disabled`, `danger` makes the icon and title red); without it a static row |
 | `IconChip`, `Tone` | The small coloured square with an emoji; tones gold, blue, green, purple, red, gray, teal | Colour comes from CSS variables |
 | `Toggle` | A switch (`role="switch"`, `aria-checked`) | Haptic; its `aria-label` is the label |
-| `ToggleRow` | A row whose whole width flips a `Toggle` | The switch's `aria-label` is the title when it is text, else "Toggle" |
-| `PickerSheet`, `Option` | A bottom sheet listing choices with a ✓ on the current one; options may have a group heading, sub text and icon | Picking an option calls `onPick` and closes; registers with Android Back; draggable by its grip |
+| `ToggleRow` | A row whose whole width flips a `Toggle` | The row and switch use the visible title via `aria-labelledby`; the switch has `role="switch"` and `aria-checked` |
+| `PickerSheet`, `Option` | A bottom sheet listing choices with a ✓ on the current one; options may have a group heading, sub text and icon | The list is a `listbox` and each option exposes `aria-selected`; picking an option calls `onPick` and closes; registers with Android Back; draggable by its grip |
 | `SelectRow` | A row that shows the current choice as its sub line and opens a `PickerSheet` | The replacement for `<select>` |
 | `SliderRow` | A title, the formatted value and a styled range slider | The one place a range input is used; it is drawn with the app's CSS (the `--pct` fill) |
 | `Collapse` | Wraps a body that opens and closes: mounts the children, then animates the wrapper's height and opacity (180 ms, Web Animations API); on close animates to 0, then unmounts (a timer of 280 ms unmounts it if the animation never reports finishing). `overflow: hidden` only while animating. Flipping `open` mid-animation continues from the current height | Used by `ToolCard`, `Reasoning` (the thought text), the todo list in `StatusBar` and the file list of `TurnChangesCard`. Not used for folded runs of tool calls, which stay instant (the chat keeps one child per item). Under `prefers-reduced-motion: reduce` it mounts and unmounts at once |
 | `Chevron` | A right-pointing SVG chevron (`.chevron`) that turns 90 degrees when `open`, with a `transition: transform .18s` | Replaces the text chevrons (`▾`/`▸`) in `.chev` spans: tool run heads, `Reasoning`, the todo list, the changed-files card and the Archived row. The profile switch in the drawer keeps its text `▴`/`▾` |
-| `Segmented` | A row of buttons, one selected | Used for the text-size choice in Appearance (the Memory screen's two tabs are plain styled buttons) |
+| `Segmented` | A row of buttons, one selected | The row is an accessible group and each button exposes `aria-pressed`; used for the text-size choice in Appearance (the Memory screen's two tabs are plain styled buttons) |
 
 **Motion.** `Collapse`, `Chevron` and the send button's face change (`face-in`: the Send, Stop, Mic, Live, Steer and Queue buttons are keyed, so a new face fades and scales in over 120 ms) are all switched off by the phone's own "Remove animations" setting, which reaches the page as `prefers-reduced-motion: reduce`; there is no motion setting inside the app.
 
