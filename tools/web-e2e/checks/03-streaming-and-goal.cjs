@@ -36,7 +36,7 @@ module.exports = async t => {
   check((await page.locator('.goal-line').count()) === 0, 'a chat without a goal shows no goal line')
   await sleep(1500)
   const replies = await page.locator('.msg.assistant').allInnerTexts()
-  const last = replies[replies.length - 1]
+  const last = replies[replies.length - 1].replace(/^Hermes(?:\s+Replying)?\s*/, '')
   check(/^Streams are a sequence of values over time\./.test(last.trim()), `reply continues from the snapshot (${JSON.stringify(last.slice(0, 60))})`)
   check(replies.filter(r => r.includes('Streams are')).length === 1, 'no duplicate reply bubble')
   await page.screenshot({ path: path.join(SHOTS, 'hm-shot-inflight.png') })
