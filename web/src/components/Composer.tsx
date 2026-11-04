@@ -1,3 +1,4 @@
+import { useTextDirection } from '../text-direction'
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { bargeInAvailable, fmtPause, getLivePause, interruptLive, liveAvailable, setLiveMute, startLive, stopLive } from '../live'
 import { startListening, stopListening, useVoice, voiceErrorText, voiceInputAvailable } from '../voice'
@@ -44,6 +45,7 @@ const EFFORT_SHORT: Record<string, string> = { medium: 'med', minimal: 'min', no
 
 
 export function Composer({ injected, onInjected }: { injected: string | null; onInjected: () => void }) {
+  const direction = useTextDirection()
   // Each chat keeps its own unsent text; the new-chat screen has one per profile.
   const draftKey = useStore(s => s.active?.storedId || `new:${s.profile}`)
   const fresh = useStore(s => (s.active?.items.length ?? 0) === 0)
@@ -519,6 +521,7 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
           /
         </button>
         <textarea
+          dir={direction}
           ref={ta}
           rows={1}
           value={text}

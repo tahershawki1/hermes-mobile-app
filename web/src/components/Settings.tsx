@@ -1,3 +1,4 @@
+import { setTextDirection, useTextDirection } from '../text-direction'
 // Settings: default model per bot (or all), API keys, and every Hermes config option — the phone
 // twin of Desktop's Models / Keys / Config pages. All writes go through the dashboard REST API,
 // scoped with ?profile=, so Hermes validates and stores them exactly as Desktop would.
@@ -787,6 +788,7 @@ const THEMES: Array<{ id: Theme; label: string; bg: string; bar: string; user: s
 const THEME_NAME: Record<Theme, string> = { default: 'Default', oled: 'OLED black', light: 'Light', system: 'System' }
 
 function AppearancePage() {
+  const direction = useTextDirection()
   const scale = useStore(s => s.textScale)
   const [theme, setThemeState] = useState<Theme>(savedTheme)
   return (
@@ -815,6 +817,13 @@ function AppearancePage() {
             </button>
           ))}
         </div>
+      </Section>
+      <Section title="Text direction" footer="Automatic detects each paragraph. Change this when a mixed-language message needs a fixed reading direction.">
+        <SelectRow title="اتجاه النص / Text direction" value={direction} onChange={setTextDirection} options={[
+          { value: 'auto', label: 'تلقائي / Automatic' },
+          { value: 'rtl', label: 'من اليمين إلى اليسار / Right to left' },
+          { value: 'ltr', label: 'من اليسار إلى اليمين / Left to right' }
+        ]} />
       </Section>
       <Section title="Text size">
         <div className="size-preview">The quick brown fox jumps over the lazy dog.</div>
