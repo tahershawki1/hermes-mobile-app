@@ -3868,3 +3868,124 @@ img.inline-frame { display: block; max-width: 100%; max-height: 60vh; margin: 0 
 /* A bounded settings load can fail and offer an in-app retry. */
 .load-error { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .load-error .btn { flex: none; }
+
+
+/* Hermes presence: expressive, theme-aware, and quiet when idle.
+   Animated parts exist only during a live turn; no JavaScript timers or canvas loops. */
+.hm-presence {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  vertical-align: middle;
+}
+.hm-presence.large { width: 112px; height: 112px; }
+.hm-presence svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.hm-presence-halo { stroke: var(--accent); stroke-width: 1.6; opacity: 0.22; }
+.hm-presence-face { fill: var(--surface-2); stroke: var(--accent); stroke-width: 2.6; }
+.hm-presence-eye { fill: var(--text); transform-box: fill-box; transform-origin: center; }
+.hm-presence-brow { stroke: var(--text); stroke-width: 2.3; stroke-linecap: round; opacity: 0.65; }
+.hm-presence-smile { stroke: var(--accent); stroke-width: 2.8; stroke-linecap: round; }
+.hm-presence-spark { fill: var(--accent); }
+.hm-presence.thinking .hm-presence-face { animation: hm-think-nod 2s ease-in-out infinite; transform-origin: center; }
+.hm-presence.thinking .hm-presence-spark { animation: hm-spark 1.3s ease-in-out infinite; }
+
+.hm-chat-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hm-chat-title-text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.hm-chat-title .hm-presence { width: 25px; height: 25px; }
+
+.hm-welcome-avatar {
+  display: grid;
+  place-items: center;
+  width: 138px;
+  height: 138px;
+  margin: 0 auto 4px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 25%, color-mix(in srgb, var(--accent) 14%, var(--surface)), var(--bg) 75%);
+  box-shadow: 0 12px 38px color-mix(in srgb, var(--accent) 10%, transparent);
+  animation: hm-hello 420ms ease-out both;
+}
+.hm-welcome-note {
+  font-size: 0.92rem;
+  margin: 9px 0 0;
+  color: var(--text);
+  opacity: 0.82;
+}
+.empty .suggestion {
+  border-radius: 16px;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+.empty .suggestion:focus-visible, .empty .suggestion:active {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.empty .suggestion:active { background: var(--surface-2); }
+
+.msg.assistant {
+  border: 1px solid var(--border);
+  border-radius: 18px 18px 18px 5px;
+  padding: 11px 13px;
+  background: var(--surface);
+}
+.hm-assistant-byline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  color: var(--dim);
+  font-size: 0.76rem;
+  font-weight: 650;
+  letter-spacing: 0.015em;
+}
+.hm-assistant-byline .hm-presence { width: 22px; height: 22px; }
+.hm-replying { font-size: 0.72rem; color: var(--accent); font-weight: 500; }
+.hm-replying::before { content: '·'; padding: 0 5px 0 1px; }
+.hm-working-presence {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 16px);
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px 18px 18px 5px;
+  background: var(--surface);
+  color: var(--dim);
+  font-size: 0.82rem;
+}
+.hm-typing { display: inline-flex; align-items: center; gap: 4px; padding-left: 2px; }
+.hm-typing i {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.35;
+  animation: hm-type 1.2s ease-in-out infinite;
+}
+.hm-typing i:nth-child(2) { animation-delay: 0.16s; }
+.hm-typing i:nth-child(3) { animation-delay: 0.32s; }
+@keyframes hm-hello {
+  from { opacity: 0.2; scale: 0.94; }
+  to { opacity: 1; scale: 1; }
+}
+@keyframes hm-think-nod {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.96); }
+}
+@keyframes hm-spark {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+@keyframes hm-type {
+  0%, 70%, 100% { opacity: 0.32; }
+  35% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-presence.thinking .hm-presence-face,
+  .hm-presence.thinking .hm-presence-spark,
+  .hm-welcome-avatar,
+  .hm-typing i { animation: none; }
+}
