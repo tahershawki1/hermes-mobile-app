@@ -38,6 +38,7 @@ import { BotsScreen } from './components/Bots'
 import { GalleryScreen } from './components/Gallery'
 import { CronScreen, FilesScreen, HubScreen, MemoryScreen, ProjectsScreen, SkillsScreen } from './components/Screens'
 import { Spinner } from './components/Spinner'
+import { HermesPresence, WorkingPresence } from './components/HermesPresence'
 import { BgApp } from './components/BgApp'
 import { refreshBg } from './bgapp'
 import { bootMark } from './boot'
@@ -86,6 +87,7 @@ function Header() {
   const title = useStore(s => (s.opening && s.preview?.storedId === s.opening ? s.preview.title : s.active?.title))
   const profile = useStore(s => s.profile)
   const hasActive = useStore(s => Boolean(s.active))
+  const working = useStore(s => s.active?.running ?? false)
   const dot = useStore(s => dotState(s.conn, s.health))
   const chatReading = useAutoRead(useStore(s => s.active?.storedId))
   const draftReading = useDraftAutoRead()
@@ -102,8 +104,9 @@ function Header() {
         ☰{unread && <span className="unread-dot on-menu" />}
       </button>
       <button className="title-btn" onClick={() => hasActive && setState({ sheet: 'chat-menu' })}>
-        <span className="title">
-          <Title text={title} fallback={hasActive ? 'New chat' : 'Hermes'} />
+        <span className="title hm-chat-title">
+          <HermesPresence state={working ? 'thinking' : 'idle'} />
+          <span className="hm-chat-title-text"><Title text={title} fallback={hasActive ? 'New chat' : 'Hermes'} /></span>
         </span>
         <span className="subtitle">
           <span
@@ -356,9 +359,10 @@ function Empty({ onPick }: { onPick: (t: string) => void }) {
   const picks = useMemo(() => suggestions(catalog), [catalog, profile])
   return (
     <div className="empty">
-      <div className="logo">☤</div>
+      <div className="hm-welcome-avatar"><HermesPresence size="large" /></div>
       <div className="empty-title">Hermes</div>
       <div className="dim">{profile === 'default' ? 'Your agent, on your phone.' : `Profile: ${profile}`}</div>
+      <p className="hm-welcome-note">What are we working on today?</p>
       <div className="suggestions">
         {picks.map(s => (
           <button key={s.text} className="suggestion" onClick={() => onPick(s.text)}>
@@ -736,6 +740,7 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
           </div>
         )
       })}
+      {running && !previewing && items[items.length - 1]?.kind !== 'assistant' && <WorkingPresence />}
       <QueuedRows />
       <div className="chat-pad" />
       {showJump && (
