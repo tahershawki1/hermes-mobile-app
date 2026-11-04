@@ -17,7 +17,7 @@ Three files. Two environment variables, `OPENUI_TELEMETRY_DISABLED=1` and `DO_NO
 
 Not in CI: `e2e.py` and the other phone tools, `test_bghost.sh`, `tools/web-e2e/coldstart.cjs`.
 
-**APK workflows retained:** `build-taher.yml` builds and uploads the signed Hermes Taher APK, while `release-taher.yml` builds and publishes the signed Hermes Taher release only when manually dispatched. The redundant original-app `release.yml` and candidate `apk-candidate.yml` were removed. Non-APK CI, upstream monitoring, and Debian-image workflows remain intact.
+**APK workflow retained:** `build-taher.yml` builds, verifies, uploads, and publishes the signed Hermes Taher APK in one workflow. The redundant original-app `release.yml` and candidate `apk-candidate.yml` were removed. Non-APK CI, upstream monitoring, and Debian-image workflows remain intact.
 
 **`image.yml`, workflow "Ready-made Debian image"**, manual only (`workflow_dispatch`, input `publish`, default false). Run it after moving the Hermes pin in `phone/bootstrap.sh`. One job `image` on `ubuntu-24.04-arm`, 90 min limit, `contents: write`, checkout with `persist-credentials: false`:
 1. Runs `test_bootstrap_pin.sh` and `test_bootstrap_image.sh`.
@@ -25,6 +25,8 @@ Not in CI: `e2e.py` and the other phone tools, `test_bghost.sh`, `tools/web-e2e/
 3. Computes the file name (`build-image.sh --name`) and the release tag `hermes-image-<first 12 of the pin>`.
 4. If `publish` is off: uploads the image, its `.sha256` and `build.log` as a workflow artifact (7 days). If on: creates the release `hermes-image-<pin12>` when missing (prerelease, `--latest=false`, so the app's update check and the APK download keep pointing at the app release), then uploads the image first and the `.sha256` second (a half-replaced pair fails `bootstrap.sh`'s hash check, which falls back to a normal install).
 
-Additional GitHub Actions workflows: `build-taher.yml` builds the Taher app; `release-taher.yml` publishes Taher releases **only on an explicit `workflow_dispatch` action** (no branch-push publication); `watch-upstream.yml` checks upstream changes. Changes merged into `main` do not themselves publish an APK. The original `release.yml` was removed; integrations must not create release tags automatically.
+Additional GitHub Actions workflows: `build-taher.yml` builds and publishes the Taher app on main app changes; `watch-upstream.yml` checks upstream changes. Changes merged into `main` do not themselves publish an APK. The original `release.yml` was removed; integrations must not create release tags automatically.
 
 **Hermes Taher 1.0.15 candidate.** `build-taher.yml` also runs on `main` changes to Android, web, phone, and its own workflow file. It builds version `1.0.15` with versionCode `100015`, signs with the existing Taher keystore, verifies the APK and uploads `hermes-taher-1.0.15-apk` as a workflow artifact. This is a build artifact, not a published GitHub release. Subsequent builds intended for installation must increment versionCode.
+
+**Unified Taher APK delivery:** `build-taher.yml` is the only APK workflow. Changes to app code on `main` trigger the signed production build, signature verification, artifact upload, and GitHub Release publication in sequence. Version `1.1.<run_number>` uses versionCode `110000 + run_number`, which stays above the previous `1.0.15` (100015). Releases are named `taher-v1.1.<run_number>` and include `Hermes-Taher-1.1.<run_number>.apk` and its SHA-256 checksum. The in-app updater checks the repository's latest GitHub Release. `release-taher.yml` has been removed.
