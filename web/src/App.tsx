@@ -310,22 +310,10 @@ function StatusBar() {
   const [openGoal, setOpenGoal] = useState(false)
   const elapsed = useElapsed(turnStart, running)
   const done = todos.filter(t => taskView(t.status) === 'success').length
-  const current = todos.find(t => taskView(t.status) === 'running')
-  const next = todos.find(t => taskView(t.status) === 'pending')
-  const last = [...todos].reverse().find(t => taskView(t.status) === 'failed' || taskView(t.status) === 'success')
-  const faceState = current ? 'working' : running ? 'thinking' : last && taskView(last.status) === 'failed' ? 'failed' : todos.length && done === todos.length ? 'success' : 'idle'
   const showGoal = goal != null && !GOAL_HIDDEN.has(goal.status)
   if (!running && todos.length === 0 && !showGoal) return null
   return (
     <div className="statusbar">
-      {(running || todos.length > 0) && <div className="hm-live-summary" role="status" aria-live="polite">
-        <HermesPresence state={faceState} size="large" />
-        <div className="hm-live-summary-text">
-          <span>تم: {done}/{todos.length} {last && taskView(last.status) === "success" ? `· ${last.content || ""}` : ""}</span>
-          <span>جاري: {current?.content || (running ? status || "جارٍ تحليل الطلب" : "لا توجد مهمة نشطة")}</span>
-          <span>التالي: {next?.content || (running ? "التحقق من النتائج" : "لا توجد مهام معلقة")}</span>
-        </div>
-      </div>}
       {running && (
         <div className="status-line">
           <Spinner small /> <span className="status-text">{status || 'Working…'}</span>

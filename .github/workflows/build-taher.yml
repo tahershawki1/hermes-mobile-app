@@ -69,9 +69,12 @@ jobs:
           if [ -n "${KEYSTORE:-}" ]; then rm -f "$KEYSTORE"; fi
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/build/hermes-mobile.apk | head -n 4
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs android/build/hermes-mobile.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources android/build/hermes-mobile.apk > "$RUNNER_TEMP/taher-resources.txt"
-          if grep -q 'string/hm_devtools' "$RUNNER_TEMP/taher-resources.txt"; then
-            echo "::error::Production APK contains the test-only WebView debugging marker."
+      - name: Reject remote debugging in the production APK
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump resources android/build/hermes-mobile.apk > "$RUNNER_TEMP/apk-resources.txt"
+          if grep -q 'hm_devtools' "$RUNNER_TEMP/apk-resources.txt"; then
+            echo "::error::Production APK contains the remote debugging test flag"
             exit 1
           fi
       - uses: actions/upload-artifact@v4

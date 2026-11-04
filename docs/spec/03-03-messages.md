@@ -25,7 +25,7 @@ There is no separate item kind for approvals, images, files or errors. Approvals
 
 `AssistantMsg`.
 
-- **Reasoning block** (`Reasoning`): hidden when there is no reasoning text. While the reply streams without text yet it reads "Thinking…" with a spinner and shows the last 160 characters as a peek; once finished it reads "Thought process" with a brain icon. Tap to expand the full reasoning (links work).
+- **Reasoning block** (`Reasoning`): hidden when there is no reasoning text. While the reply streams without text yet it shows only a 22 px expressive thinking face, with the accessible label `Thinking…` and no collapsed preview; once finished it reads "Thought process" with a brain icon. Tap to expand the full reasoning (links work).
 - **Text** (`Markdown`, see below), with a blinking caret while streaming. While streaming, Markdown skips language detection for unlabelled code blocks (it waits for the finished reply).
 - **Warning line** "⚠ <warning>" when the turn ended with a warning.
 - **Actions** (only when the reply is finished and is the last text segment of its turn; `hasActions` in `App.tsx`): Copy, Read aloud, Retry, Branch, and the turn stats.

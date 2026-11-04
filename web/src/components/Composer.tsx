@@ -220,7 +220,7 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
     const t = over ? over.typed : text
     const slash = fromBox && t.trimStart().startsWith('/')
     const qs = slash ? [] : over ? over.quotes : quotes
-    if ((!t.trim() && !qs.length) || busy) return
+    if ((!t.trim() && !qs.length && !attachments.length) || busy || attaching > 0) return
     haptic()
     const full = withQuotes(qs, t)
     if (mode === 'queue') {
@@ -556,7 +556,7 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
             }
           }}
         />
-        {!text.trim() && !quotes.length && !running && !listening && liveAvailable() && (
+        {!text.trim() && !quotes.length && !attachments.length && !attaching && !running && !listening && liveAvailable() && (
           <button key="live"
             className="send live-btn"
             aria-label="Live conversation"
@@ -572,7 +572,7 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
             </svg>
           </button>
         )}
-        {!text.trim() && !quotes.length && !running && !listening && voiceInputAvailable() ? (
+        {!text.trim() && !quotes.length && !attachments.length && !attaching && !running && !listening && voiceInputAvailable() ? (
           <button key="mic"
             className="send mic"
             aria-label="Dictate"
@@ -597,7 +597,7 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
           <button key="mic-on" className="send mic on" aria-label="Stop dictation" onClick={() => { haptic(); stopListening() }}>
             <span className="stop-square" />
           </button>
-        ) : running && !text.trim() && !quotes.length ? (
+        ) : running && !text.trim() && !quotes.length && !attachments.length ? (
           <button key="stop" className="send stop" aria-label="Stop" onClick={() => { haptic(); void interrupt() }}>
             <span className="stop-square" />
           </button>
@@ -618,7 +618,7 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
             </button>
           </Fragment>
         ) : (
-          <button key="send" className="send" aria-label={conn !== 'open' ? 'Send when back online' : 'Send'} onClick={() => void send()} disabled={(!text.trim() && !quotes.length) || busy || !!opening}>
+          <button key="send" className="send" aria-label={conn !== 'open' ? 'Send when back online' : 'Send'} onClick={() => void send()} disabled={(!text.trim() && !quotes.length && !attachments.length) || busy || attaching > 0 || !!opening}>
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M3.4 20.4 21.85 12.5c.8-.35.8-1.5 0-1.84L3.4 2.6c-.66-.29-1.39.2-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/></svg>
           </button>
         )}
