@@ -1,0 +1,4 @@
+- Fix camera capture and image sharing in Hermes Taher by using the installed app's camera provider address. Return captured photos to the composer as content URIs.
+- Allow photos and files to be sent without a caption; keep Send visible when attachments are present and wait for uploads before sending.
+- Remove the large bottom animation summary. Show only a small expressive face while waiting and in the live thinking control; reasoning remains expandable.
+- Validation: web build, unit and browser checks are recorded in the PR. Camera capture on a real Android phone still needs verification.

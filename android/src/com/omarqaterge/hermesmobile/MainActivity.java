@@ -1466,7 +1466,7 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             return false;
         }
-        Uri uri = CameraProvider.uriFor(f);
+        Uri uri = CameraProvider.uriFor(this, f);
         Intent send = new Intent(Intent.ACTION_SEND).setType(imageMime(ext)).putExtra(Intent.EXTRA_STREAM, uri)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         send.setClipData(ClipData.newRawUri("image", uri)); // carries the grant through the chooser
@@ -1724,7 +1724,7 @@ public class MainActivity extends Activity {
             java.io.File[] old = dir.listFiles();
             if (old != null) for (java.io.File f : old) f.delete(); // the page already read the last one
             cameraFile = new java.io.File(dir, "photo-" + System.currentTimeMillis() + ".jpg");
-            Uri out = CameraProvider.uriFor(cameraFile);
+            Uri out = CameraProvider.uriFor(this, cameraFile);
             Intent i = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
                     .putExtra(android.provider.MediaStore.EXTRA_OUTPUT, out)
                     .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -1800,7 +1800,7 @@ public class MainActivity extends Activity {
             java.io.File f = cameraFile;
             cameraFile = null;
             boolean got = result == RESULT_OK && f != null && f.length() > 0;
-            fileCallback.onReceiveValue(got ? new Uri[]{Uri.fromFile(f)} : null);
+            fileCallback.onReceiveValue(got ? new Uri[]{CameraProvider.uriFor(this, f)} : null);
             fileCallback = null;
             return;
         }

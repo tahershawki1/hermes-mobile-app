@@ -109,8 +109,10 @@ Initial scroll: when the divider is above the last screenful, the chat opens wit
 
 The header shows a 25 px CSS/SVG Hermes face beside the chat title (`HermesPresence`, `.hm-chat-title`). It becomes subtly expressive only while `active.running` is true. The empty welcome shows a 112 px face in a coloured halo and the line "What are we working on today?", above the existing suggested prompts. The entrance animation plays once.
 
-After the last message, the chat shows `WorkingPresence` (`.hm-working-presence`) while a turn is running and the last item is not an assistant reply. When an assistant message arrives, the extra activity row disappears. It is inserted **after** the mapped message items, preserving the direct-child positions used by message search and scrolling; it does not poll or use an animation timer.
+After the last message, the chat shows `WorkingPresence` (`.hm-working-presence`) while a turn is running and the last item is not an assistant reply. It consists only of a 22 px thinking face, with no bubble border, background, caption or typing dots. When an assistant message arrives, the extra activity row disappears. It is inserted **after** the mapped message items, preserving the direct-child positions used by message search and scrolling; it does not poll or use an animation timer.
 
 The small SVG uses theme variables for its colours. Motion consists of a bounded welcome entrance plus thinking/spark/typing animation **only during an active turn**. A `prefers-reduced-motion: reduce` user sees static indicators. This is a visual cue rather than a claim of human consciousness or a substitute for real response streaming.
 
 The implementation file `HermesPresence.tsx` exports the face and activity row. The working row exposes the accessible status name Hermes is working (aria-label: Hermes is working).
+
+The large bottom animation/task summary is removed; the existing compact status line, expandable task list and goal controls remain. See [compact thinking decision](../decisions/compact-thinking-indicator.md).

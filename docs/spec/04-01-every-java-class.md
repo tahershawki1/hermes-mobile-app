@@ -37,3 +37,5 @@ Support files that are not counted as classes:
 - `android/res/xml/shortcuts.xml`: launcher shortcuts New chat and Live mode (4.6).
 - `android/res/xml/network_security_config.xml`: cleartext traffic is off except to `127.0.0.1` and `localhost` (the on-device Hermes). Everything else must be TLS.
 - `android/assets/www/index.html` is the built web UI and `android/assets/phone/uninstall.sh` is the copy of `phone/uninstall.sh` that `Uninstall` runs; both are copied in by `build.sh`.
+
+`CameraProvider.uriFor(context, file)` builds its authority from the installed package name plus `.camera`, matching the manifest in original, Taher and Taher test variants. `MainActivity` uses it for capture output, the captured-photo WebView result and image sharing. Captured photos return as content URIs rather than file URIs.

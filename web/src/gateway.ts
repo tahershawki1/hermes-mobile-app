@@ -690,7 +690,7 @@ export async function searchMessages(q: string): Promise<MessageHit[]> {
 
 export async function sendPrompt(text: string): Promise<void> {
   const trimmed = text.trim()
-  if (!trimmed) return
+  if (!trimmed && !getState().active?.attachments.length) return
   if (getState().opening) throw new Error('Still opening your chat — wait a moment')
   rememberPrompt(trimmed)
   const a = await targetChat()
@@ -724,7 +724,7 @@ export async function sendPrompt(text: string): Promise<void> {
   const files = queued.filter(x => x.kind === 'file')
   // Photos are already queued inside Hermes; files travel as their @file: references in the text.
   const refs = files.map(f => f.ref).filter(Boolean)
-  const body = refs.length ? `${refs.join(' ')}\n\n${trimmed}` : trimmed
+  const body = refs.length ? `${refs.join(' ')}\n\n${trimmed}`.trim() : trimmed || 'Please review the attached images.'
   pushItem({ kind: 'user', id: uid, text: trimmed, images: images.length ? images : undefined, imageUrls: queued.some(x => x.preview) ? queued.filter(x => x.kind === 'image').map(x => x.preview || '') : undefined, imagePaths: queued.some(x => x.path) ? queued.filter(x => x.kind === 'image').map(x => x.path || '') : undefined, files: files.length ? files.map(f => f.name) : undefined, fileRefs: files.length ? files.map(f => f.ref || '') : undefined, at: Date.now() })
   updateActive(() => ({ running: true, status: '', attachments: [], openAssistantId: null, turnStart: Date.now() }))
   try {
