@@ -137,3 +137,8 @@ Events from Hermes (`client.onEvent` in `gateway.ts`) reach the chat for the ope
 `hydrate` (`store.ts`) turns Hermes's stored rows into items: user rows (with `@file:` and `@image:` references split off into attachment chips, and Hermes's "--- Attached Context ---" block dropped), assistant rows (text and reasoning), tool rows (with the stored inline diff), and system rows as info notices. Hidden rows are skipped, and a row id or tool call id seen twice is skipped (a resume of a chat that is still answering repeats its tail).
 
 ---
+
+
+#### Speaker identity in replies
+
+Each `AssistantMsg` begins with a `.hm-assistant-byline` showing a 22 px `HermesPresence` face and the "Hermes" label. During streaming it adds the "Replying" cue (`.hm-replying`), which disappears once the reply finishes. This byline is decorative and doesn't change Markdown rendering, message actions, message IDs or timestamps. Assistant cards use the existing theme colours and remain readable in light and dark modes. Only the current streaming item animates.

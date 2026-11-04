@@ -103,3 +103,14 @@ Initial scroll: when the divider is above the last screenful, the chat opens wit
 `web/src/activity.ts` polls the plugin's `GET /activity` while the page is visible and connected: every 3 s while the banner shows something, once 0.3 s after the open chat's turn ends (the background review starts then), otherwise on every third tick (9 s). `bannerItems` hides the open chat's own live turn (it has the status bar), but keeps its background review. When a chat drops out of the list, the session list is refreshed so its unread dot appears.
 
 ---
+
+
+#### Conversational presence (lightweight motion)
+
+The header shows a 25 px CSS/SVG Hermes face beside the chat title (`HermesPresence`, `.hm-chat-title`). It becomes subtly expressive only while `active.running` is true. The empty welcome shows a 112 px face in a coloured halo and the line "What are we working on today?", above the existing suggested prompts. The entrance animation plays once.
+
+After the last message, the chat shows `WorkingPresence` (`.hm-working-presence`) while a turn is running and the last item is not an assistant reply. When an assistant message arrives, the extra activity row disappears. It is inserted **after** the mapped message items, preserving the direct-child positions used by message search and scrolling; it does not poll or use an animation timer.
+
+The small SVG uses theme variables for its colours. Motion consists of a bounded welcome entrance plus thinking/spark/typing animation **only during an active turn**. A `prefers-reduced-motion: reduce` user sees static indicators. This is a visual cue rather than a claim of human consciousness or a substitute for real response streaming.
+
+The implementation file `HermesPresence.tsx` exports the face and activity row. The working row exposes the accessible status name Hermes is working (aria-label: Hermes is working).
