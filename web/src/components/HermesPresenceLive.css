@@ -1,0 +1,28 @@
+/* Task-driven face. Animations are compositor-friendly and disabled for reduced motion. */
+.hm-face-live { --hm-face-color: var(--accent); display: inline-flex; flex: none; }
+.hm-face-live.thinking { --hm-face-color: #a993ff; }
+.hm-face-live.working { --hm-face-color: #f3c34f; }
+.hm-face-live.success { --hm-face-color: var(--ok); }
+.hm-face-live.failed { --hm-face-color: var(--err); }
+.hm-face-live.blocked { --hm-face-color: var(--warn); }
+.hm-face-live .hm-presence-halo { stroke: var(--hm-face-color); }
+.hm-face-live .hm-presence-eye, .hm-face-live .hm-presence-spark { fill: var(--hm-face-color); }
+.hm-face-live .hm-presence-smile { stroke: var(--hm-face-color); }
+.hm-face-live.thinking .hm-face-eyes { animation: hm-eye-look 2.8s ease-in-out infinite; transform-origin: center; }
+.hm-face-live.working .hm-presence-halo { animation: hm-face-pulse 1.6s ease-in-out infinite; transform-origin: center; }
+.hm-face-live.success .hm-presence-spark { animation: hm-face-pulse .8s ease-in-out 2; transform-origin: center; }
+.hm-face-live.failed .hm-presence-face { stroke: var(--err); }
+@keyframes hm-eye-look { 0%, 20%, 100% { transform: translateX(0); } 40%, 55% { transform: translateX(3px); } 70%, 85% { transform: translateX(-3px); } }
+@keyframes hm-face-pulse { 0%,100% { opacity: .4; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.07); } }
+.hm-live-summary { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 6px 0; }
+.hm-live-summary-text { display: flex; flex-direction: column; min-width: 0; gap: 3px; font-size: .78rem; }
+.hm-live-summary-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-live-task.running .hm-live-task-icon { color: #f3c34f; text-shadow: 0 0 9px #f3c34f; animation: hm-task-glow 1.6s ease-in-out infinite; }
+.hm-live-task.success .hm-live-task-icon { color: var(--ok); }
+.hm-live-task.failed .hm-live-task-icon { color: var(--err); }
+.hm-live-task.blocked .hm-live-task-icon { color: var(--warn); }
+.hm-live-task.pending .hm-live-task-icon { color: var(--dim); }
+@keyframes hm-task-glow { 0%,100% { opacity: .65; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+ .hm-face-live *, .hm-live-task.running .hm-live-task-icon { animation: none !important; }
+}
