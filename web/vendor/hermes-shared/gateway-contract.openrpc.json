@@ -35521,6 +35521,26 @@
         "title": "TerminalOutputPayload",
         "type": "object"
       },
+      "TerminalToolOutputPayload": {
+        "additionalProperties": false,
+        "description": "``tools.environments.base_output`` live foreground terminal drain.",
+        "properties": {
+          "tool_id": {
+            "title": "Tool Id",
+            "type": "string"
+          },
+          "chunk": {
+            "title": "Chunk",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_id",
+          "chunk"
+        ],
+        "title": "TerminalToolOutputPayload",
+        "type": "object"
+      },
       "TerminalResizeParams": {
         "additionalProperties": false,
         "properties": {
@@ -39239,6 +39259,18 @@
           "name": "payload",
           "schema": {
             "$ref": "#/components/schemas/SideAgentCompletePayload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "terminal.output",
+      "summary": "Live output chunk from a foreground terminal tool call.",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/TerminalToolOutputPayload"
           }
         }
       ]

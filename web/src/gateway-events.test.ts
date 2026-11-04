@@ -124,6 +124,15 @@ describe('tool cards', () => {
     expect(items().filter(i => i.id === 'call_4')).toHaveLength(1)
   })
 
+  test('live terminal chunks append to the matching running call only', () => {
+    emit('tool.start', { tool_id: 'call_live', name: 'terminal', args: { command: 'printf hello' } })
+    emit('terminal.output', { tool_id: 'call_live', chunk: 'hel' })
+    emit('terminal.output', { tool_id: 'call_live', chunk: 'lo\n' })
+    emit('terminal.output', { tool_id: 'other_call', chunk: 'ignored' })
+    expect(items()).toHaveLength(1)
+    expect(items()[0]).toMatchObject({ id: 'call_live', liveOutput: 'hello\n', status: 'running' })
+  })
+
   test('tool.complete without a start adds a finished card', () => {
     emit('tool.complete', { tool_id: 'call_5', name: 'web_search', result_text: 'found' })
     expect(shape()).toEqual([{ kind: 'tool', id: 'call_5', name: 'web_search', status: 'done', resultText: 'found' }])

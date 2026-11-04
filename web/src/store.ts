@@ -47,6 +47,8 @@ export type ChatItem =
       duration?: number | null
       summary?: string | null
       resultText?: string | null
+      /** Bounded live stdout/stderr chunks from Hermes while a terminal call is running. */
+      liveOutput?: string
       inlineDiff?: string | null
       risk?: string
     }

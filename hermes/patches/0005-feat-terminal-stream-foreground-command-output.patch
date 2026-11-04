@@ -1,0 +1,255 @@
+From 7d690fcf2b2e93862769f0a32eb8965340499d88 Mon Sep 17 00:00:00 2001
+From: Taher Shawki <taher.shawki@gmail.com>
+Date: Wed, 4 Nov 2026 19:44:32 +0400
+Subject: [PATCH] feat(terminal): stream foreground command output
+
+Add an optional output observer to the bounded process collector and wire foreground local terminal calls to session-scoped gateway events. Redact chunks before sending and suppress streaming when identical commands are running concurrently, so output cannot cross tool calls. Register a typed terminal.output event and test that observers receive chunks without affecting capture. This preserves command execution and approval behavior; remote terminal backends keep their existing output behavior.
+---
+ tests/tools/test_base_environment.py | 12 ++++++++++++
+ tools/environments/base.py           |  8 +++++---
+ tools/environments/base_output.py    | 15 +++++++++++----
+ tools/terminal_tool.py               | 27 +++++++++++++++++++++++++++
+ tui_gateway/contracts/events.py      | 10 +++++++++-
+ tui_gateway/tool_progress.py         | 21 +++++++++++++++++++++
+ 6 files changed, 85 insertions(+), 8 deletions(-)
+
+diff --git a/tests/tools/test_base_environment.py b/tests/tools/test_base_environment.py
+index 2d7631362b..78444e00ec 100644
+--- a/tests/tools/test_base_environment.py
++++ b/tests/tools/test_base_environment.py
+@@ -73,6 +73,18 @@ def test_nopasswd_probe_runs_sudo_n_inside_backend_only_when_supported(
+ 
+ 
+ class TestBoundedOutputCollector:
++    def test_live_observer_receives_chunks_and_cannot_break_capture(self):
++        seen = []
++        collector = _BoundedOutputCollector(1_000, on_chunk=seen.append)
++        collector.append("first")
++        collector.append(" second")
++        assert seen == ["first", " second"]
++        assert collector.render() == "first second"
++
++        broken = _BoundedOutputCollector(1_000, on_chunk=lambda _chunk: (_ for _ in ()).throw(RuntimeError("offline")))
++        broken.append("still captured")
++        assert broken.render() == "still captured"
++
+     def test_large_stream_retains_bounded_head_and_tail(self):
+         collector = _BoundedOutputCollector(1_000)
+         collector.append("HEAD-SENTINEL\n")
+diff --git a/tools/environments/base.py b/tools/environments/base.py
+index 5bd33c036b..190214bd9e 100644
+--- a/tools/environments/base.py
++++ b/tools/environments/base.py
+@@ -450,7 +450,8 @@ class BaseEnvironment(ABC):
+     def _wait_for_process(
+         self, proc: ProcessHandle, timeout: int = 120, *,
+         bounded_capture: bool = False, watch_interrupt_tid: int | None = None,
+-        output=None, yield_handler: Callable[[ProcessHandle, str], dict] | None = None) -> dict:
++        output=None, output_callback: Callable[[str], None] | None = None,
++        yield_handler: Callable[[ProcessHandle, str], dict] | None = None) -> dict:
+         """Poll-based wait with interrupt checking and stdout draining (shared, not overridden).
+         ``yield_handler(proc, output_so_far)``: when the tool thread is asked to yield
+         (``tools.interrupt.request_yield`` — a user message arrived mid-command), the drain
+@@ -471,7 +472,7 @@ class BaseEnvironment(ABC):
+         data. See #64435.
+         """
+         if output is None:
+-            output = _new_output_collector(proc, bounded_capture)
++            output = _new_output_collector(proc, bounded_capture, on_chunk=output_callback)
+         drain_stop = threading.Event() if yield_handler is not None else None
+         drain_thread = _start_drain_thread(proc, output, drain_stop)
+         _now = time.monotonic()
+@@ -610,6 +611,7 @@ class BaseEnvironment(ABC):
+         stdin_data: str | None = None,
+         rewrite_compound_background: bool = True,
+         bounded_capture: bool = False,
++        output_callback: Callable[[str], None] | None = None,
+         yield_handler: Callable[[ProcessHandle, str], dict] | None = None) -> dict:
+         """Execute a command, return {"output": str, "returncode": int}. ``bounded_capture=True``
+         caps retention at ``tool_output.max_bytes`` WHILE draining; only the foreground terminal
+@@ -665,7 +667,7 @@ class BaseEnvironment(ABC):
+             proc_holder.append(spawned)
+             if fenced:  # the hard-exit kill may have stopped waiting for us before we registered
+                 self._force_kill_process(spawned)
+-            output = _new_output_collector(spawned, bounded_capture)
++            output = _new_output_collector(spawned, bounded_capture, on_chunk=output_callback)
+             output_holder.append(output)
+             try:
+                 return self._wait_for_process(
+diff --git a/tools/environments/base_output.py b/tools/environments/base_output.py
+index c0175a926f..f477300628 100644
+--- a/tools/environments/base_output.py
++++ b/tools/environments/base_output.py
+@@ -34,7 +34,7 @@ class _BoundedOutputCollector:
+     # Hard ceiling on spill file size; protects disk from runaway output.
+     _SPILL_CAP_CHARS = 5_000_000
+ 
+-    def __init__(self, max_chars: int, spill_path: "Path | None" = None):
++    def __init__(self, max_chars: int, spill_path: "Path | None" = None, on_chunk: Callable[[str], None] | None = None):
+         self.max_chars = max(1, int(max_chars))
+         self._head_limit = int(self.max_chars * 0.4)
+         self._tail_limit = self.max_chars - self._head_limit
+@@ -48,6 +48,7 @@ class _BoundedOutputCollector:
+         self._spill_fh: IO[str] | None = None
+         self._spill_chars = 0
+         self._spill_capped = False
++        self._on_chunk = on_chunk
+ 
+     def _maybe_spill(self, text: str) -> None:
+         """Tee ``text`` to the spill file (opened lazily on first overflow)."""
+@@ -101,6 +102,12 @@ class _BoundedOutputCollector:
+     def append(self, text: str) -> None:
+         if not text:
+             return
++        # Live observers must never be able to interrupt pipe draining or command execution.
++        if self._on_chunk is not None:
++            try:
++                self._on_chunk(text)
++            except Exception:
++                pass
+         with self._lock:
+             text_len = len(text)
+             # Spill tee activates at the first overflow, then mirrors every chunk.
+@@ -166,14 +173,14 @@ class _BoundedOutputCollector:
+             return head[:head_chars] + notice[:available] + rendered_tail + suffix
+ 
+ 
+-def _new_output_collector(proc, bounded_capture: bool) -> _BoundedOutputCollector:
++def _new_output_collector(proc, bounded_capture: bool, on_chunk: Callable[[str], None] | None = None) -> _BoundedOutputCollector:
+     """Build the collector for one ``_wait_for_process`` call. ``bounded_capture`` (foreground
+     terminal path only) caps retention at ``tool_output.max_bytes`` and tees overflow to a
+     spill file under ``$HERMES_HOME/cache/terminal-output`` (created only on actual overflow;
+     spills older than 7 days are pruned opportunistically). Otherwise the collector is
+     effectively unbounded so internal consumers keep full-fidelity output."""
+     if not bounded_capture:
+-        return _BoundedOutputCollector(_UNBOUNDED_CAPTURE_CHARS)
++        return _BoundedOutputCollector(_UNBOUNDED_CAPTURE_CHARS, on_chunk=on_chunk)
+     try:
+         from tools.tool_output_limits import get_max_bytes
+         capture_limit = get_max_bytes()
+@@ -193,7 +200,7 @@ def _new_output_collector(proc, bounded_capture: bool) -> _BoundedOutputCollecto
+                     pass
+     except Exception:
+         spill_path = None
+-    return _BoundedOutputCollector(capture_limit, spill_path=spill_path)
++    return _BoundedOutputCollector(capture_limit, spill_path=spill_path, on_chunk=on_chunk)
+ 
+ 
+ def _finalize_wait_result(collector: _BoundedOutputCollector, rendered: str, returncode: int | None) -> dict:
+diff --git a/tools/terminal_tool.py b/tools/terminal_tool.py
+index 474b64e892..169845f576 100644
+--- a/tools/terminal_tool.py
++++ b/tools/terminal_tool.py
+@@ -84,6 +84,31 @@ DISK_USAGE_WARNING_THRESHOLD_GB = _safe_parse_import_env("TERMINAL_DISK_WARNING_
+ # thread, can't stomp on each other (GHSA-qg5c-hvr5-hjgr). Gateway mode
+ # resolves approvals via the per-session queue in tools.approval instead.
+ _callback_tls = threading.local()
++_live_output_lock = threading.Lock()
++_live_output_calls: dict[tuple[str, str], list[tuple[str, Any]]] = {}
++
++
++def register_live_output_call(session_id: str, tool_call_id: str, command: str, callback) -> None:
++    """Bind a terminal tool call to its live output sink for this session."""
++    with _live_output_lock:
++        _live_output_calls.setdefault((session_id, command), []).append((tool_call_id, callback))
++
++
++def unregister_live_output_call(session_id: str, tool_call_id: str, command: str) -> None:
++    with _live_output_lock:
++        key = (session_id, command)
++        remaining = [entry for entry in _live_output_calls.get(key, []) if entry[0] != tool_call_id]
++        if remaining:
++            _live_output_calls[key] = remaining
++        else:
++            _live_output_calls.pop(key, None)
++
++
++def _live_output_callback(session_id: str, command: str):
++    with _live_output_lock:
++        calls = _live_output_calls.get((session_id, command), [])
++        # Identical commands may be run concurrently; suppress streaming rather than mix their output.
++        return calls[0][1] if len(calls) == 1 else None
+ 
+ 
+ def _get_sudo_password_callback():
+@@ -1268,6 +1293,8 @@ def _run_foreground(
+             # internal env.execute() consumers stay unbounded.
+             result = env.execute(
+                 command, timeout=effective_timeout, cwd=command_cwd, bounded_capture=True,
++                **({"output_callback": _live_output_callback(session_key, command)}
++                   if getattr(env, "is_local", False) and _live_output_callback(session_key, command) else {}),
+                 **_yield_kwargs(command, env_type=env_type, cwd=command_cwd, effective_task_id=eff,
+                                 task_id=task_id, session_key=session_key),
+             )
+diff --git a/tui_gateway/contracts/events.py b/tui_gateway/contracts/events.py
+index 1b26695406..e2c338187d 100644
+--- a/tui_gateway/contracts/events.py
++++ b/tui_gateway/contracts/events.py
+@@ -583,11 +583,19 @@ class TerminalOutputPayload(Payload):
+     chunk: str
+ 
+ 
++class TerminalToolOutputPayload(Payload):
++    """``tools.environments.base_output`` live foreground terminal drain."""
++
++    tool_id: str
++    chunk: str
++
++
+ class TerminalClosePayload(Payload):
+     process_id: str
+ 
+ 
+ event("agent.terminal.output", TerminalOutputPayload, doc="Output chunk from an agent-owned background process.")
++event("terminal.output", TerminalToolOutputPayload, doc="Live output chunk from a foreground terminal tool call.")
+ event("terminal.close", TerminalClosePayload, doc="An agent-owned background process closed.")
+ 
+ 
+@@ -725,7 +733,7 @@ __all__ = [
+     "SessionReclaimedPayload", "SessionResumeProgressPayload", "SessionTitlePayload", "SessionUsagePayload",
+     "SetupReadyPayload", "SideAgentCompletePayload", "SkinPayload", "StatusUpdatePayload",
+     "StreamDeltaPayload", "SubagentEventPayload", "SubagentOutputTailEntry", "TerminalClosePayload",
+-    "TerminalOutputPayload", "TipShowPayload", "TodoUpdatedPayload", "ToolCompletePayload",
++    "TerminalOutputPayload", "TerminalToolOutputPayload", "TipShowPayload", "TodoUpdatedPayload", "ToolCompletePayload",
+     "ToolGeneratingPayload", "ToolLabel", "ToolLabelKind", "ToolOutputRiskPayload", "ToolStartPayload",
+     "TurnStatus", "VoiceStatusPayload",
+     "VoiceTranscriptPayload", "WakeDetectedPayload",
+diff --git a/tui_gateway/tool_progress.py b/tui_gateway/tool_progress.py
+index 5e0f5be62c..8c14351874 100644
+--- a/tui_gateway/tool_progress.py
++++ b/tui_gateway/tool_progress.py
+@@ -277,6 +277,22 @@ def _on_tool_start(sid: str, tool_call_id: str, name: str, args: dict):
+     if _connector_lifecycle_is_stale(sid, name, args):
+         return
+     session = _sessions.get(sid)
++    if name == "terminal" and isinstance(args, dict) and isinstance(args.get("command"), str):
++        from tools.terminal_tool import register_live_output_call
++        stream_session_id = str((session or {}).get("session_key") or sid)
++        command = args["command"]
++
++        def _emit_terminal_chunk(chunk: str) -> None:
++            # Match Hermes's existing sensitive-output policy before forwarding live text.
++            try:
++                from agent.redact import redact_sensitive_text
++                safe = redact_sensitive_text(str(chunk), force=True)
++            except Exception:
++                return
++            if safe:
++                _emit("terminal.output", sid, {"tool_id": tool_call_id, "chunk": safe})
++
++        register_live_output_call(stream_session_id, tool_call_id, command, _emit_terminal_chunk)
+     if session is not None:
+         with contextlib.suppress(Exception):
+             from agent.display import capture_local_edit_snapshot
+@@ -322,6 +338,11 @@ def _prepare_tool_result_metadata(sid: str, tool_call_id: str, name: str, args:
+ 
+ 
+ def _on_tool_complete(sid: str, tool_call_id: str, name: str, args: dict, result: str):
++    if name == "terminal" and isinstance(args, dict) and isinstance(args.get("command"), str):
++        from tools.terminal_tool import unregister_live_output_call
++        session = _sessions.get(sid)
++        stream_session_id = str((session or {}).get("session_key") or sid)
++        unregister_live_output_call(stream_session_id, tool_call_id, args["command"])
+     session = _sessions.get(sid)
+     prepared = session.setdefault("tool_result_metadata", {}) if session is not None else {}
+     # Consume the pre-flush preview even when this completion is dropped as stale.

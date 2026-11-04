@@ -646,6 +646,42 @@ textarea {
   flex-direction: column;
   gap: 6px;
 }
+
+.terminal-transcript {
+  margin: 4px 0 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+.terminal-transcript-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 600;
+}
+.terminal-transcript-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-weight: 400;
+}
+.terminal-transcript-output {
+  max-height: 38dvh;
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  overscroll-behavior: contain;
+}
 .tool-run {
   width: 100%;
   display: flex;

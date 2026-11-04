@@ -10,6 +10,7 @@ fixes in `patches/`. Each one is a plain `git format-patch` file, applied on top
 | `0002-fix-tui_gateway-keep-the-prompt-a-model-switch-marker-absorbed` | The message sent right after a model switch (or the first message, when the model was picked before it) disappeared from the model's history at the next switch, while the chat still showed it | Offered upstream (Refs NousResearch/hermes-agent#131382) |
 | `0003-perf-yaml-reuse-a-per-thread-reader-in-safe_load` | Every YAML read built a new parser (~7 ms each on a phone), so a skill scan took ~1.8 s while holding up the chat's other requests at start-up; now ~0.5 s | To be offered upstream (branch `perf/yaml-reuse-parser`) |
 | `0004-fix-title-back-off-quietly-when-the-title-model-s-provider-is-busy` | A rate-limited title model ("Auxiliary title generation failed: HTTP 429") warned in every new chat and got one more request per chat; now it is logged only, title requests back off (60 s doubling to 30 min) and the chat keeps its instant title until a later turn names it | To be offered upstream |
+| `0005-feat-terminal-stream-foreground-command-output` | Local foreground terminal calls stream redacted output chunks to the owning gateway session while preserving bounded capture; identical concurrent commands suppress streaming rather than mix output | To be offered upstream |
 
 ## On the phone
 

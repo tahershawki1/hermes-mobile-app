@@ -4792,6 +4792,11 @@ export interface TerminalOutputPayload {
   process_id: string
   chunk: string
 }
+/** ``tools.environments.base_output`` live foreground terminal drain. */
+export interface TerminalToolOutputPayload {
+  tool_id: string
+  chunk: string
+}
 export interface TerminalClosePayload {
   process_id: string
 }
@@ -5671,6 +5676,8 @@ export const SERVER_REQUEST_METHODS = [
 export interface BackendGatewayEventMap {
   /** Output chunk from an agent-owned background process. */
   'agent.terminal.output': TerminalOutputPayload
+  /** Live output chunk from a foreground terminal tool call. */
+  'terminal.output': TerminalToolOutputPayload
   /** A /background side agent finished. */
   'background.complete': SideAgentCompletePayload
   /** Device-flow URL + code for the billing scope step-up; the client opens the browser. */

@@ -863,6 +863,21 @@ wss.on('connection', ws => {
           }))
           return
         }
+        if (/^stream terminal$/.test(params.text)) {
+          const first = { tool_id: `call_stream1_${row}`, command: 'printf first' }
+          const second = { tool_id: `call_stream2_${row}`, command: 'printf second' }
+          play(sid, [
+            ...beginning('terminal', first.tool_id, first.command, { command: first.command }),
+            ['terminal.output', { tool_id: first.tool_id, chunk: 'first ' }],
+            ['terminal.output', { tool_id: first.tool_id, chunk: 'output\n' }],
+            ['tool.complete', { tool_id: first.tool_id, name: 'terminal', args: { command: first.command }, duration_s: 0.1, result: { output: 'first output\n', exit_code: 0 } }],
+            ['tool.start', { tool_id: second.tool_id, name: 'terminal', args: { command: second.command } }],
+            ['terminal.output', { tool_id: second.tool_id, chunk: 'second output\n' }],
+            ['tool.complete', { tool_id: second.tool_id, name: 'terminal', args: { command: second.command }, duration_s: 0.1, result: { output: 'second output\n', exit_code: 0 } }],
+            ...ending('Both commands finished.', 2, row)
+          ], 30, 60)
+          return
+        }
         if (/^run the long thing$/.test(params.text)) {
           // Hermes's security scan can repeat one finding many times; the answer buttons must stay on screen.
           const f = '[HIGH] Nested executable body could not be resolved: the shell will execute a grouped value, but the scanner cannot prove the complete body.'
