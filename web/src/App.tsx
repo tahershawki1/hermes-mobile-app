@@ -278,6 +278,20 @@ function useElapsed(start: number | null, running: boolean): number {
   return start == null ? 0 : Math.max(0, Date.now() - start)
 }
 
+type TaskView = 'pending' | 'running' | 'success' | 'failed' | 'blocked'
+function taskView(status?: string): TaskView {
+  switch ((status || '').toLowerCase()) {
+    case 'completed': case 'complete': case 'done': case 'succeeded': case 'success': return 'success'
+    case 'in_progress': case 'running': case 'active': return 'running'
+    case 'failed': case 'error': return 'failed'
+    case 'blocked': case 'paused': return 'blocked'
+    default: return 'pending'
+  }
+}
+function taskSymbol(status: TaskView): string {
+  return status === 'success' ? '✓' : status === 'failed' ? '✕' : status === 'running' ? '●' : status === 'blocked' ? 'Ⅱ' : '○'
+}
+
 const GOAL_HIDDEN = new Set(['cleared', 'done', 'complete', 'completed', 'achieved'])
 
 function StatusBar() {
@@ -291,11 +305,23 @@ function StatusBar() {
   const [openTodos, setOpenTodos] = useState(false)
   const [openGoal, setOpenGoal] = useState(false)
   const elapsed = useElapsed(turnStart, running)
-  const done = todos.filter(t => t.status === 'completed' || t.status === 'done').length
+  const done = todos.filter(t => taskView(t.status) === 'success').length
+  const current = todos.find(t => taskView(t.status) === 'running')
+  const next = todos.find(t => taskView(t.status) === 'pending')
+  const last = [...todos].reverse().find(t => taskView(t.status) === 'failed' || taskView(t.status) === 'success')
+  const faceState = current ? 'working' : running ? 'thinking' : last && taskView(last.status) === 'failed' ? 'failed' : todos.length && done === todos.length ? 'success' : 'idle'
   const showGoal = goal != null && !GOAL_HIDDEN.has(goal.status)
   if (!running && todos.length === 0 && !showGoal) return null
   return (
     <div className="statusbar">
+      {(running || todos.length > 0) && <div className="hm-live-summary" role="status" aria-live="polite">
+        <HermesPresence state={faceState} size="large" />
+        <div className="hm-live-summary-text">
+          <span>تم: {done}/{todos.length} {last && taskView(last.status) === "success" ? `· ${last.content || ""}` : ""}</span>
+          <span>جاري: {current?.content || (running ? status || "جارٍ تحليل الطلب" : "لا توجد مهمة نشطة")}</span>
+          <span>التالي: {next?.content || (running ? "التحقق من النتائج" : "لا توجد مهام معلقة")}</span>
+        </div>
+      </div>}
       {running && (
         <div className="status-line">
           <Spinner small /> <span className="status-text">{status || 'Working…'}</span>
@@ -318,8 +344,8 @@ function StatusBar() {
           <Collapse open={openTodos}>
             <ul>
               {todos.map((t, i) => (
-                <li key={t.id || i} className={`todo-${t.status}`}>
-                  {t.status === 'completed' ? '✓' : t.status === 'in_progress' ? '◐' : t.status === 'cancelled' ? '✕' : '○'} {t.content}
+                <li key={t.id || i} className={`todo-${t.status} hm-live-task ${taskView(t.status)}`}>
+                  <span className="hm-live-task-icon" aria-hidden="true">{taskSymbol(taskView(t.status))}</span> {t.content}
                 </li>
               ))}
             </ul>
