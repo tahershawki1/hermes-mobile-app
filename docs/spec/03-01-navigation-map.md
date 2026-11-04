@@ -163,3 +163,5 @@ The Android shell and other code call these globals (declared in `App.tsx`, `sha
 Top to bottom in the DOM, which is also the paint order: `Header`, `ConnBanner`, `FindBar`, `Chat`, `ActivityBanner`, `StatusBar`, `CompressHint`, `TtsPlayer`, `BgApp`, `Composer`, the open `screen`, `Drawer`, the open `sheet`, `RequestSheet`, `UninstallResume`, `CanvasPanel`, `BtwSheet`, `DialogHost`, toasts.
 
 ---
+
+**Conversations home.** The `chats` screen is an in-app navigation destination opened by Android Back from a conversation, not an app exit. It displays `ChatHome.tsx` as a full-screen `Conversations` region (the `aria-label: Conversations` accessibility name). Choosing a conversation returns to the chat; Back on this home permits Android to exit. Sheets and dialogs still take precedence over navigation.
