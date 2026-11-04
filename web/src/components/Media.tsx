@@ -205,12 +205,45 @@ export function Lightbox({ src, url, alt, onClose }: { src: string; url: string;
   )
 }
 
+/** Download the actual file bytes, not a link to Hermes's private filesystem. */
+async function saveChatFile(src: string, name: string): Promise<void> {
+  const url = isRemote(src) ? src : streamUrl(src) || await loadLocal(localPath(src))
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(`File unavailable (HTTP ${response.status})`)
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  try {
+    const anchor = document.createElement('a')
+    anchor.href = objectUrl
+    anchor.download = name
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+  }
+}
+
 export function FileChip({ src, label }: { src: string; label?: string }) {
   const name = label || localPath(src).split('/').pop() || src
+  const [saving, setSaving] = useState(false)
   return (
-    <button className="file-chip" onClick={() => openWith(src)}>
-      📎 <span>{name}</span>
-    </button>
+    <span className="file-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      <button onClick={() => openWith(src)} aria-label={`Open ${name}`}>📎 {name}</button>
+      <button
+        disabled={saving}
+        aria-label={`Save ${name} to phone`}
+        title="Save file"
+        onClick={() => {
+          if (saving) return
+          setSaving(true)
+          void saveChatFile(src, name)
+            .then(() => toast('Download requested'))
+            .catch(e => toast(e instanceof Error ? e.message : 'Could not download file', 'error'))
+            .finally(() => setSaving(false))
+        }}
+      >{saving ? 'Saving…' : '⬇ Save'}</button>
+    </span>
   )
 }
 
