@@ -19,7 +19,7 @@ module.exports = async t => {
       r.setStart(t, 0); r.setEnd(t, Math.min(4, t.length))
       const s = getSelection(); s.removeAllRanges(); s.addRange(r)
     }, [sel, starts])
-    await selectIn('.msg.user .bubble')
+    await selectIn('.msg.user .plain-line')
     await sleep(300)
     check((await page.locator('.quote-bar').count()) === 0, 'quote: no bar for a selection in your own bubble')
     await selectIn('.msg.assistant .md > p')

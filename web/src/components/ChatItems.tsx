@@ -1,3 +1,4 @@
+import { useTextDirection } from '../text-direction'
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import { type ChatItem, toast } from '../store'
 import { branchAt, filesOf, imagesOf, resendFrom, retryTurn, type MsgFile, type MsgImage } from '../gateway'
@@ -273,6 +274,7 @@ function CopyBtn({ text, choose }: { text: string; choose?: boolean }) {
 }
 
 function UserMsg({ item, actions, busy }: { item: Extract<ChatItem, { kind: 'user' }>; actions: boolean; busy: boolean }) {
+  const direction = useTextDirection()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(item.text)
   const [keep, setKeep] = useState<MsgImage[]>(() => imagesOf(item)) // photos sent again with the edit
@@ -316,6 +318,7 @@ function UserMsg({ item, actions, busy }: { item: Extract<ChatItem, { kind: 'use
         <textarea
           ref={ta}
           className="edit-box"
+          dir={direction}
           value={draft}
           autoFocus
           onChange={e => setDraft(e.target.value)}

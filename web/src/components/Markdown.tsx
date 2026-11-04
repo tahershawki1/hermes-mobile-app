@@ -1,3 +1,4 @@
+import { rehypeTextDirection, useTextDirection } from '../text-direction'
 import { Children, cloneElement, createContext, isValidElement, memo, useContext, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactElement, type ReactNode } from 'react'
 import ReactMarkdown, { defaultUrlTransform, type Components, type Options } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -550,6 +551,7 @@ const urlTransform = (url: string) => (isLocal(url) || CHAT_HREF.test(url) ? url
 
 // interactive: card buttons may send (chat replies only; canvas, files and /btw just show cards).
 export const Markdown = memo(function Markdown({ text, streaming = false, interactive = false }: { text: string; streaming?: boolean; interactive?: boolean }) {
+  const direction = useTextDirection()
   const ui = useMemo(() => ({ streaming, interactive }), [streaming, interactive])
   const seed = useRef('')
   seed.current = useMemo(() => hashText(text), [text])
@@ -567,6 +569,7 @@ export const Markdown = memo(function Markdown({ text, streaming = false, intera
     <StreamingCtx.Provider value={streaming}>
     <div
       className="md"
+      dir={direction}
       onClick={e => {
         // Tap inline code or a formula to copy it (a selection in progress is left alone).
         const t = e.target as HTMLElement
@@ -589,7 +592,7 @@ export const Markdown = memo(function Markdown({ text, streaming = false, intera
     >
       <ReactMarkdown
         remarkPlugins={REMARK as unknown as Options['remarkPlugins']}
-        rehypePlugins={rehypePlugins(streaming, rich) as unknown as Options['rehypePlugins']}
+        rehypePlugins={[...rehypePlugins(streaming, rich), [rehypeTextDirection, { direction }]] as unknown as Options['rehypePlugins']}
         // Sanitize adds the user-content- prefix to ids itself; don't let remark-rehype add it too.
         remarkRehypeOptions={REMARK_REHYPE}
         urlTransform={urlTransform}
@@ -611,9 +614,10 @@ function mdComponents(seed: { current: string }, nextBox: { current: number }): 
     input: props =>
       props.type === 'checkbox' ? <TaskBox seed={seed.current} idx={nextBox.current++} initial={Boolean(props.checked)} /> : <input {...props} />,
     ul: ({ className, children }) => (className?.includes('contains-task-list') ? <TaskList className={className}>{children}</TaskList> : <ul className={className}>{children}</ul>),
-    li: ({ className, children }) =>
+    li: ({ className, children, dir }) =>
       className?.includes('task-list-item') ? (
         <li
+          dir={dir}
           className={className}
           onClick={e => {
             const t = e.target as HTMLElement
@@ -628,7 +632,7 @@ function mdComponents(seed: { current: string }, nextBox: { current: number }): 
           {children}
         </li>
       ) : (
-        <li className={className}>{children}</li>
+        <li dir={dir} className={className}>{children}</li>
       ),
     code: ({ className, children }) => {
       // Inline code that is just a web address opens it (fenced blocks end in a newline and stay plain, for copying).
@@ -636,6 +640,7 @@ function mdComponents(seed: { current: string }, nextBox: { current: number }): 
       if (!url) return <code className={className}>{children}</code>
       return (
         <a
+          dir="auto"
           href={url}
           className="code-link"
           onClick={e => {
@@ -655,6 +660,7 @@ function mdComponents(seed: { current: string }, nextBox: { current: number }): 
         const id = decodeURIComponent(href.slice(1))
         return (
           <a
+          dir="auto"
             href={href}
             onClick={e => {
               e.preventDefault()
@@ -671,6 +677,7 @@ function mdComponents(seed: { current: string }, nextBox: { current: number }): 
       if (chat) {
         return (
           <a
+          dir="auto"
             href={href}
             className="chat-link"
             onClick={e => {
@@ -691,6 +698,7 @@ function mdComponents(seed: { current: string }, nextBox: { current: number }): 
       }
       return (
         <a
+          dir="auto"
           href={href}
           onClick={e => {
             e.preventDefault()
