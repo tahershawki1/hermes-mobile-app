@@ -73,3 +73,5 @@ Reordering is switched off while the search field has text, and archived rows ca
 **Rules (owner decisions, do not undo):** swipe right = Archive, swipe left = Delete with a confirm, the ⋮ menu has Pin / Archive / Delete (and Rename), reorder is long-press-drag-release with no mode and no handles, pinning is dragging into Pinned. Pin-by-swipe, long-press menus and a rearrange mode were rejected.
 
 ---
+
+**Full conversations home.** `ChatHome.tsx` renders the `chats` screen inside the web app. It reuses `SessionList` for pinned and ordinary chats, including search, archive, rename, delete and drag-to-pin. A new-chat button starts a draft; selecting a chat closes the home. The `aria-label: Conversations` marks the home for assistive technologies.
