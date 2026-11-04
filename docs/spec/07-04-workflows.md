@@ -17,16 +17,7 @@ Three files. Two environment variables, `OPENUI_TELEMETRY_DISABLED=1` and `DO_NO
 
 Not in CI: `e2e.py` and the other phone tools, `test_bghost.sh`, `tools/web-e2e/coldstart.cjs`.
 
-**`release.yml`, workflow "Release"**, runs on a pushed tag matching `v*`. Two jobs, so that no npm package's code runs where the signing key is (a package's install script or build plugin can leave a process running for the rest of its job, but cannot reach another job's runner); the workflow's token is read-only except in `apk`:
-
-Job `web` (ubuntu-latest, 15-minute limit, no secrets): checkout with `persist-credentials: false`, Node 22, `npm ci` and `npx vite build` in `web/`, then uploads `web/dist/index.html` as the artifact `web-dist` (kept 1 day).
-
-Job `apk` (ubuntu-latest, after `web`, `contents: write`, 30-minute limit, no Node or npm):
-1. Checkout with `persist-credentials: false` (the write token is passed only to `gh` in the publish step, never left in `.git/config`); JDK 17 (Temurin); downloads `web-dist` into `web/dist`.
-2. `sdkmanager "platforms;android-36" "build-tools;35.0.0"`.
-3. Build: fails with "Set the KEYSTORE_B64 secret first" if the secret is empty; decodes `KEYSTORE_B64` into `$RUNNER_TEMP/release.keystore`; takes the version from the tag (`v0.8.62` → `0.8.62`), computes `VERSION_CODE = a*10000 + b*100 + c` from `a.b.c`, runs `android/build.sh` with `HM_SKIP_WEB_BUILD=1` (it uses the downloaded `index.html` instead of running `vite build`), `KEYSTORE`, `VERSION_NAME`, `VERSION_CODE`; deletes the keystore.
-4. `gh release create <tag> android/build/hermes-mobile.apk --title "Hermes Mobile <tag>"` with notes that point to the README install steps. When the release already exists (made on GitHub's website, which creates the tag and the release together) it only attaches the APK to it (`gh release upload --clobber`).
-The release APK must always be signed with the same key, or phones cannot update.
+**APK workflows retained:** `build-taher.yml` builds and uploads the signed Hermes Taher APK, while `release-taher.yml` builds and publishes the signed Hermes Taher release only when manually dispatched. The redundant original-app `release.yml` and candidate `apk-candidate.yml` were removed. Non-APK CI, upstream monitoring, and Debian-image workflows remain intact.
 
 **`image.yml`, workflow "Ready-made Debian image"**, manual only (`workflow_dispatch`, input `publish`, default false). Run it after moving the Hermes pin in `phone/bootstrap.sh`. One job `image` on `ubuntu-24.04-arm`, 90 min limit, `contents: write`, checkout with `persist-credentials: false`:
 1. Runs `test_bootstrap_pin.sh` and `test_bootstrap_image.sh`.
@@ -34,8 +25,6 @@ The release APK must always be signed with the same key, or phones cannot update
 3. Computes the file name (`build-image.sh --name`) and the release tag `hermes-image-<first 12 of the pin>`.
 4. If `publish` is off: uploads the image, its `.sha256` and `build.log` as a workflow artifact (7 days). If on: creates the release `hermes-image-<pin12>` when missing (prerelease, `--latest=false`, so the app's update check and the APK download keep pointing at the app release), then uploads the image first and the `.sha256` second (a half-replaced pair fails `bootstrap.sh`'s hash check, which falls back to a normal install).
 
-Additional GitHub Actions workflows: `build-taher.yml` builds the Taher app; `release-taher.yml` publishes Taher releases **only on an explicit `workflow_dispatch` action** (no branch-push publication); `watch-upstream.yml` checks upstream changes. Changes merged into `main` do not themselves publish an APK. The original `release.yml` remains tag-only (`v*` tags); integrations must not create those tags.
-
-**Signed APK candidates.** `.github/workflows/apk-candidate.yml` runs on pushes to `main` and via manual dispatch. It builds the web UI in an unprivileged job, transfers only the built page to a separate Android signing job, uses the existing `KEYSTORE_B64` release signing secret, verifies the production APK and uploads `hermes-mobile-1.0.14-signed` as a 14-day Actions artifact. Candidates are not published as GitHub releases; tagged production releases remain controlled by `release.yml`. The candidate uses versionCode `10014`, which must be increased before a subsequent candidate intended for an in-place update.
+Additional GitHub Actions workflows: `build-taher.yml` builds the Taher app; `release-taher.yml` publishes Taher releases **only on an explicit `workflow_dispatch` action** (no branch-push publication); `watch-upstream.yml` checks upstream changes. Changes merged into `main` do not themselves publish an APK. The original `release.yml` was removed; integrations must not create release tags automatically.
 
 **Hermes Taher 1.0.15 candidate.** `build-taher.yml` also runs on `main` changes to Android, web, phone, and its own workflow file. It builds version `1.0.15` with versionCode `100015`, signs with the existing Taher keystore, verifies the APK and uploads `hermes-taher-1.0.15-apk` as a workflow artifact. This is a build artifact, not a published GitHub release. Subsequent builds intended for installation must increment versionCode.
