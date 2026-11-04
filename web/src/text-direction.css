@@ -4,6 +4,8 @@
 .md.md :is(p, h1, h2, h3, h4, h5, h6, li, blockquote, th, td, dt, dd, summary, figcaption) { text-align: start; unicode-bidi: isolate; }
 .md.md :is(ul, ol), .md.md ul.contains-task-list { padding-inline: 0; }
 .md.md li:not(.task-list-item) { margin-inline-start: 1.3em; }
+.md.md .task-list-item { margin-inline: 0; padding: 3px 0; padding-inline-start: 34px; }
+.md.md .task-box { left: auto; right: auto; inset-inline-start: 0; }
 .md.md blockquote { border-left: 0; border-inline-start: 3px solid var(--accent-2); }
 .md.md :is(pre, code), .md.md .codeblock, .md.md .katex { direction: ltr; unicode-bidi: isolate; text-align: left; }
 .md.md a, .plain-text a { unicode-bidi: isolate; }

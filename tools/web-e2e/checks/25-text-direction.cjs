@@ -6,7 +6,7 @@ module.exports = async ({ browser }) => {
   const errors = []
   pg.on('pageerror', e => errors.push(e.message))
   await pg.addInitScript(nativeShell)
-  const answer = 'قبل **Hermes** بعد\n\nHello world\n\n- عنصر عربي\n- English item\n\n| الاسم | Name |\n| --- | --- |\n| عربي | English |\n\nافتح [الموقع](https://example.com) الآن\n\n```js\nconst name = "عربي"\n```'
+  const answer = 'قبل **Hermes** بعد\n\nHello world\n\n- عنصر عربي\n- English item\n\n- [ ] مهمة عربية\n- [x] English task\n\n| الاسم | Name |\n| --- | --- |\n| عربي | English |\n\nافتح [الموقع](https://example.com) الآن\n\n```js\nconst name = "عربي"\n```'
   // Exercise the real gateway/rendering pipeline with controlled multilingual reply content.
   await pg.routeWebSocket('**/api/ws*', socket => {
     const server = socket.connectToServer()
@@ -25,6 +25,7 @@ module.exports = async ({ browser }) => {
   await pg.locator('.composer').getByRole('button', { name: 'Send', exact: true }).click()
   const md = pg.locator('.msg.assistant .md').last()
   await md.locator('p', { hasText: 'قبل Hermes بعد' }).waitFor({ timeout: 15000 })
+  await pg.locator('.composer').getByRole('button', { name: 'Stop', exact: true }).waitFor({ state: 'hidden' })
   const userLines = pg.locator('.msg.user .plain-line')
   check(JSON.stringify(await userLines.evaluateAll(es => es.map(e => getComputedStyle(e).direction))) === JSON.stringify(['rtl', 'ltr', 'rtl']), 'direction: every user line detects its own language')
   check(await pg.locator('.msg.user .plain-text').last().textContent() === 'قبل Hermes بعد\nHello world\nمرحبا 123', 'direction: user text and newlines stay unchanged')
@@ -46,7 +47,12 @@ module.exports = async ({ browser }) => {
   })
   check(order.every(x => x !== null) && order[0] > order[1] && order[1] > order[2], `direction: mixed words appear in right-to-left reading order (${order})`)
   check(await md.locator('p', { hasText: 'Hello world' }).evaluate(e => getComputedStyle(e).direction) === 'ltr', 'direction: English paragraph stays left-to-right')
-  check(JSON.stringify(await md.locator('li').evaluateAll(es => es.map(e => getComputedStyle(e).direction))) === '["rtl","ltr"]', 'direction: list items detect their language')
+  check(JSON.stringify(await md.locator('li:not(.task-list-item)').evaluateAll(es => es.map(e => getComputedStyle(e).direction))) === '["rtl","ltr"]', 'direction: list items detect their language')
+  const tasks = md.locator('.task-list-item')
+  check(JSON.stringify(await tasks.evaluateAll(es => es.map(e => getComputedStyle(e).direction))) === '["rtl","ltr"]', 'direction: task items detect each language')
+  check(await tasks.evaluateAll(es => es.every(e => { const box = e.querySelector('.task-box').getBoundingClientRect(); const r = e.getBoundingClientRect(); return box.left >= r.left - 1 && box.right <= r.right + 1 && (getComputedStyle(e).direction === 'rtl' ? Math.abs(box.right-r.right) < 2 : Math.abs(box.left-r.left) < 2) })), 'direction: task checkboxes stay in their gutter on the reading side')
+  await tasks.first().getByRole('checkbox').click()
+  check(await tasks.first().getByRole('checkbox').getAttribute('aria-checked') === 'true', 'direction: Arabic task checkbox still toggles')
   check(await md.locator('td').first().evaluate(e => getComputedStyle(e).direction) === 'rtl', 'direction: Arabic table cell aligns right')
   check(await md.locator('a').first().evaluate(e => getComputedStyle(e).unicodeBidi) === 'isolate', 'direction: links are isolated')
   check(await md.locator('pre').evaluate(e => getComputedStyle(e).direction) === 'ltr', 'direction: code remains left-to-right')
