@@ -96,7 +96,7 @@ module.exports = async t => {
       check(JSON.stringify(on) === JSON.stringify(['DeepSeek']) && (await section('Connected').locator('.dot-set').count()) === 1, `providers: only DeepSeek is connected, with one dot (${on.join(', ')})`)
     }
     // Claude: Pro / Max signs in inside the app (SignIn.tsx; Termux is its fallback); Claude Code's token login is a command to copy
-    await pv.locator('.providers .set-row', { hasText: 'Anthropic (Claude)' }).click()
+    await section('Popular providers').locator('.set-row', { hasText: 'Anthropic (Claude)' }).click()
     const cl = pv.locator('.sheet', { has: pv.locator('.sheet-title', { hasText: 'Anthropic (Claude)' }) })
     check((await cl.getByPlaceholder('Paste API key').count()) === 1, 'providers: Anthropic offers Paste API key')
     check((await cl.locator('.set-row', { hasText: 'claude setup-token' }).getByRole('button', { name: 'Copy command' }).count()) === 1, 'providers: a login that needs another CLI is offered as a command')
