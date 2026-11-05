@@ -484,7 +484,7 @@ module.exports = async t => {
       await cs.getByRole('button', { name: /^Sessions/ }).click()
       await cs.locator('.nav-tile', { hasText: 'Settings' }).click()
       await cs.locator('.set-row', { hasText: 'Model providers' }).click()
-      await cs.locator('.providers .set-section', { has: cs.locator('.set-section-title', { hasText: 'Popular providers' }) })
+      await cs.locator('.providers .set-section', { has: cs.locator('.set-heading', { hasText: 'Popular providers' }) })
         .locator('.set-row', { hasText: 'Anthropic (Claude)' }).click()
     }
     const claudeRow = cs.locator('.sheet .set-row', { hasText: 'Claude Pro / Max' })
