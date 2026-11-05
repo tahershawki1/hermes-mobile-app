@@ -9,10 +9,12 @@
 .hm-face-live .hm-presence-eye, .hm-face-live .hm-presence-spark { fill: var(--hm-face-color); }
 .hm-face-live .hm-presence-smile { stroke: var(--hm-face-color); }
 .hm-face-live.thinking .hm-face-eyes { animation: hm-eye-look 2.8s ease-in-out infinite; transform-origin: center; }
+.hm-face-live.thinking .hm-presence-halo { animation: hm-active-halo 1.8s ease-in-out infinite; transform-origin: center; }
 .hm-face-live.working .hm-presence-halo { animation: hm-face-pulse 1.6s ease-in-out infinite; transform-origin: center; }
 .hm-face-live.success .hm-presence-spark { animation: hm-face-pulse .8s ease-in-out 2; transform-origin: center; }
 .hm-face-live.failed .hm-presence-face { stroke: var(--err); }
 @keyframes hm-eye-look { 0%, 20%, 100% { transform: translateX(0); } 40%, 55% { transform: translateX(3px); } 70%, 85% { transform: translateX(-3px); } }
+@keyframes hm-active-halo { 0%,100% { opacity: .25; transform: scale(.98); } 50% { opacity: .9; transform: scale(1.1); } }
 @keyframes hm-face-pulse { 0%,100% { opacity: .4; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.07); } }
 .hm-live-task.running .hm-live-task-icon { color: #f3c34f; text-shadow: 0 0 9px #f3c34f; animation: hm-task-glow 1.6s ease-in-out infinite; }
 .hm-live-task.success .hm-live-task-icon { color: var(--ok); }

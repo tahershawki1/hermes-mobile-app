@@ -2,10 +2,10 @@ import P5 from 'p5'
 import * as brush from 'p5.brush'
 
 export type PresenceInkApi = {
-  mount: (root: HTMLElement) => { remove: () => void }
+  mount: (root: HTMLElement, active: boolean) => { remove: () => void }
 }
 
-function mount(root: HTMLElement): { remove: () => void } {
+function mount(root: HTMLElement, active: boolean): { remove: () => void } {
   let disposed = false
   const sketch = (p: P5) => {
     brush.instance(p)
@@ -14,6 +14,7 @@ function mount(root: HTMLElement): { remove: () => void } {
       p.pixelDensity(1)
       p.frameRate(24)
       brush.scaleBrushes(1.25)
+      if (!active) p.noLoop()
     }
     p.draw = () => {
       p.clear()
@@ -34,7 +35,7 @@ function mount(root: HTMLElement): { remove: () => void } {
   }
   const instance = new P5(sketch, root)
   const onVisibility = () => {
-    if (document.hidden) instance.noLoop()
+    if (document.hidden || !active) instance.noLoop()
     else instance.loop()
   }
   document.addEventListener('visibilitychange', onVisibility)
