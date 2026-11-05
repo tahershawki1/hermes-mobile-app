@@ -4086,7 +4086,7 @@ img.inline-frame { display: block; max-width: 100%; max-height: 60vh; margin: 0 
   z-index: 80;
   inset-block: 0;
   inset-inline-end: 0;
-  width: min(92vw,  thirtyrem);
+  width: min(92vw, 30rem);
   max-width: 100%;
   display: flex;
   flex-direction: column;
