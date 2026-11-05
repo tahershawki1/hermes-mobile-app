@@ -5,8 +5,8 @@
 // opens claude.ai in the browser, signs in, copies the code Claude shows and pastes it here. Termux stays as the
 // fallback (older plugin, or the user prefers it).
 //
-// Hermes's /api/providers/oauth can miss a login that is valid in the credential pool (Claude and, on some builds,
-// Codex). The pool (/api/credentials/pool) is therefore the fallback source of truth for every OAuth provider.
+// Hermes's /api/providers/oauth can miss a login that is valid in the credential pool (depending on the provider
+// build). The pool (/api/credentials/pool) is therefore the fallback source of truth for every OAuth provider.
 import { useEffect, useRef, useState } from 'react'
 import { api, qs } from '../api'
 import { haptic, openExternal } from '../bridge'
@@ -38,6 +38,8 @@ interface Status {
   logged_in?: boolean
   source?: string | null
   source_label?: string | null
+  shared_from_profile?: string | null
+  free_tier?: boolean
 }
 
 /** The profile's credential pool (redacted by Hermes: labels and sources, never tokens). Empty when unavailable. */
@@ -46,16 +48,49 @@ export const loadPool = (profile: string): Promise<Record<string, PoolEntry[]>> 
     .then(r => Object.fromEntries((r?.providers || []).map(p => [p.provider, p.entries || []])))
     .catch(() => ({}))
 
-/** A subscription login Hermes will use. Provider-owned CLI logins keep their own card and API keys do not count. */
+/** Any OAuth subscription login Hermes will use. Provider-owned CLI logins keep their own card and API keys do not count. */
 const subscriptionLogin = (provider: string, pool: Record<string, PoolEntry[]>) =>
   (pool[provider] || []).find(e => e.auth_type === 'oauth' && !(provider === 'anthropic' && e.source === 'claude_code'))
 
-/** Fills in "signed in" when Hermes's account list misses a valid subscription stored in the credential pool. */
+/** Fills in "signed in" when Hermes's account list misses a valid OAuth subscription in the credential pool. */
 export function withPoolStatus<P extends { id: string; status?: Status }>(providers: P[], pool: Record<string, PoolEntry[]>): P[] {
   return providers.map(p => {
     if (p.status?.logged_in) return p
     const e = subscriptionLogin(p.id, pool)
     return e ? { ...p, status: { ...p.status, logged_in: true, source: 'credential_pool', source_label: e.label || null } } : p
+  })
+}
+
+/**
+ * Named bots have their own auth.json, but Hermes deliberately falls back to the main profile for
+ * single-use OAuth grants (copying a refresh token would strand one copy after the first refresh).
+ * Reflect that runtime behaviour in the UI without sharing API-key pool entries between bots.
+ */
+export function withSharedSubscriptionStatus<P extends { id: string; status?: Status }>(
+  providers: P[],
+  pool: Record<string, PoolEntry[]>,
+  mainProviders: P[],
+  mainPool: Record<string, PoolEntry[]>,
+  mainProfile = 'default'
+): P[] {
+  const own = withPoolStatus(providers, pool)
+  const shared = new Map(withPoolStatus(mainProviders, mainPool).map(p => [p.id, p]))
+  return own.map(p => {
+    if (p.status?.logged_in) return p
+    const account = shared.get(p.id)
+    if (!account?.status?.logged_in || account.status.free_tier === true) return p
+    const label = account.status.source_label?.trim()
+    return {
+      ...p,
+      status: {
+        ...p.status,
+        ...account.status,
+        logged_in: true,
+        source: 'shared_profile',
+        source_label: label ? `Main profile · ${label}` : 'Main profile',
+        shared_from_profile: mainProfile
+      }
+    }
   })
 }
 

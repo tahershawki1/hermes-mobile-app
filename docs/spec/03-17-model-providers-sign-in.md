@@ -7,13 +7,13 @@ Settings → Model providers and the model step of the first-run flow (3.18) sha
 #### Provider list
 **Opens from:** Settings → Model providers; the model step of the setup flow. **Closes with:** Back (it is part of a page). **Source:** `Providers.tsx` `ProviderList`.
 
-The catalog is built from four calls, each scoped to the bot: `GET /api/env` (keys, with provider tags), `GET /api/providers/oauth` (sign-ins), `GET /api/providers/custom-endpoints` (saved own servers) and `GET /api/credentials/pool` (some valid subscription logins, including Claude and Codex, may be visible only there). A failure of the last three degrades quietly to empty.
+The catalog is built from four calls scoped to the bot: `GET /api/env` (keys, with provider tags), `GET /api/providers/oauth` (sign-ins), `GET /api/providers/custom-endpoints` (saved own servers) and `GET /api/credentials/pool` (some valid subscription logins, including Claude and Codex, may be visible only there). For a named bot it also reads only the Main profile's OAuth account list and credential pool: valid OAuth subscriptions are inherited to match Hermes's runtime fallback, while API-key pool entries are never shared. A failure of the optional calls degrades quietly to empty.
 
 **Layout, top to bottom:**
 | Element | Looks like | Tap | States |
 |---|---|---|---|
 | Search providers (e.g. deepseek, groq) | Search field | Matches name, id, description, sign-in names, key variable names and addresses | "No provider matches. Try your own server below." |
-| Section Subscriptions · connected/total | A separate row for every account sign-in (ChatGPT / Codex, Claude, GitHub Copilot and the others), naming its vendor and exact signed-in source | Opens that subscription's provider sheet | A connected row says Connected; otherwise Sign in. A valid OAuth entry in the credential pool also counts, even when Hermes's OAuth status route misses it. |
+| Section Subscriptions · connected/total | A separate row for every account sign-in (ChatGPT / Codex, Claude, GitHub Copilot and the others), naming its vendor and exact signed-in source | Opens that subscription's provider sheet | A connected row says Connected; otherwise Sign in. A valid OAuth entry in the credential pool also counts, even when Hermes's OAuth status route misses it. In a named bot, an inherited login says `Main profile · <label>`. |
 | Section Connected providers · N | Rows of connected API providers and own servers | Opens the provider sheet | |
 | Section Popular providers | Not-connected providers from the fixed list Anthropic, OpenAI, Gemini, OpenRouter, xAI, DeepSeek, Mistral, Groq, in that order | Opens the sheet (Mistral and Groq open the endpoint sheet, they are presets) | |
 | Section All providers · N (or More providers while searching) | The rest, A–Z | Opens the sheet | |
@@ -29,7 +29,7 @@ A provider row has a dot (filled when connected), the name, a sub line (what is 
 |---|---|---|
 | Intro line | What is connected, or the description | |
 | Endpoint (saved own server only) | Address (the base URL), Model, API key ("Saved in Hermes’s .env" or "None"), Remove this endpoint (red) | Remove confirms "Remove <name>?" ("Hermes forgets this endpoint and its key.") and calls `DELETE /api/providers/custom-endpoints/<id>` |
-| Sign in (footer when a sign-in only works with the provider's own program: "Some sign-ins need that provider’s own program in Debian: the app copies the command for Termux.") | One row per sign-in with a button Sign in, Copy command, or Sign out (when active and Hermes allows disconnecting: `DELETE /api/providers/oauth/<id>`) | See "Three kinds of sign-in" |
+| Sign in (footer when a sign-in only works with the provider's own program: "Some sign-ins need that provider’s own program in Debian: the app copies the command for Termux.") | One row per sign-in with a button Sign in, Copy command, or Sign out (when active and Hermes allows disconnecting: `DELETE /api/providers/oauth/<id>`). An inherited Main-profile subscription shows **Shared** instead of Sign out because its refresh grant is not stored in the child bot. | See "Three kinds of sign-in" |
 | API key (footer: "Saved in Hermes’s .env on this phone (<VARIABLE>). It never leaves the phone except to call <provider>.") | Saved key (preview + Remove button, confirms "Remove <VARIABLE>?"); a password field ("Paste API key", or "Paste a new key to replace it" when a key is saved; `aria-label` "<provider> API key") with Save (`PUT /api/env`, body `{ key, value }`, toast "<provider> connected"); Get a key ↗ (opens the sign-up page in the browser) | |
 | Keys and logins · N | The provider's credential pool, see "Provider rotation" below. Only for a provider with an API key or pool entries; not for an own endpoint | |
 | More settings | Row (sub "Base URL and other options") that reveals the section Settings, opened at once for providers that cannot work without it | |

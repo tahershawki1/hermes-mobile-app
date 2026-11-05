@@ -119,7 +119,19 @@ function CreateSheet({ profiles, onClose, onCreated }: { profiles: Profile[]; on
   const create = async () => {
     setBusy(true)
     try {
-      await api('POST', '/api/profiles', { name, clone_from: cloneFrom || null, description: description.trim() || null }, { profile: false })
+      await api(
+        'POST',
+        '/api/profiles',
+        {
+          name,
+          clone_from: cloneFrom || null,
+          description: description.trim() || null,
+          // OAuth refresh grants must stay single-copy. Hermes lets every named bot use the main profile's grant.
+          share_auth: true,
+          mirror_credentials: true
+        },
+        { profile: false }
+      )
       if (soul.trim()) await api('PUT', `/api/profiles/${enc(name)}/soul`, { content: soul }, { profile: false })
       // A new profile has its own empty plugins folder: link the Hermes Mobile plugin in (status chip, approvals…).
       await api('POST', '/api/plugins/hermes-mobile/profiles/link', {}, { profile: false }).catch(() => {})
@@ -152,6 +164,7 @@ function CreateSheet({ profiles, onClose, onCreated }: { profiles: Profile[]; on
           ))}
         </div>
         <div className="dim small">{cloneFrom ? `Copies ${cloneFrom}’s settings, keys, skills and SOUL.md (not its chats or memory).` : 'A fresh profile with the bundled skills.'}</div>
+        <div className="dim small">All subscription logins (Codex, Claude, Copilot and others) are shared safely from the Main profile.</div>
         <label className="field">
           <span>What is it for? (optional)</span>
           <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Linear algebra tutor" />
