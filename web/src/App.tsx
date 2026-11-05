@@ -505,7 +505,7 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
     for (let k = idx; k >= 0; k--) {
       const h = folds.get(k)
       if (h && 'head' in h) {
-        toggleRun(items[k].id)
+        showToolPanel(items.slice(h.head.start, h.head.end).filter((x): x is Extract<ChatItem, { kind: 'tool' }> => x.kind === 'tool'))
         return true
       }
     }
