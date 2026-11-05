@@ -1,4 +1,5 @@
 name: Build Hermes Taher APK
+# Production APK build and release publishing workflow.
 
 on:
   workflow_dispatch:
