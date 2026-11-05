@@ -486,11 +486,26 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
   }
   // Runs of tool calls fold into one line; tapping it opens them (keyed by the run's first item id).
   const [openRuns, setOpenRuns] = useState<ReadonlySet<string>>(() => new Set())
-  const [toolPanel, setToolPanel] = useState<Extract<ChatItem, { kind: 'tool' }>[] | null>(null)
-  const showToolPanel = useCallback((tools: Extract<ChatItem, { kind: 'tool' }>[]) => setToolPanel(tools), [])
+  const [toolPanel, setToolPanel] = useState<{ id: string; run: boolean } | null>(null)
+  const showToolPanel = useCallback((tools: Extract<ChatItem, { kind: 'tool' }>[]) => {
+    if (tools.length > 0) setToolPanel({ id: tools[0].id, run: tools.length > 1 || tools[0].name === 'terminal' })
+  }, [])
   useBackHandler(() => setToolPanel(null), Boolean(toolPanel))
   const folds = useMemo(() => foldMap(items ?? [], openRuns), [items, openRuns])
   const changes = useMemo(() => turnChanges(items ?? [], running), [items, running])
+  const panelItems = useMemo(() => {
+    if (!toolPanel || !items) return []
+    const startIndex = items.findIndex(item => item.id === toolPanel.id)
+    if (startIndex < 0) return []
+    if (!toolPanel.run) {
+      const item = items[startIndex]
+      return item.kind === 'tool' ? [item] : []
+    }
+    const fold = folds.get(startIndex)
+    if (fold && 'head' in fold) return items.slice(fold.head.start, fold.head.end).filter((item): item is Extract<ChatItem, { kind: 'tool' }> => item.kind === 'tool')
+    const item = items[startIndex]
+    return item.kind === 'tool' ? [item] : []
+  }, [folds, items, toolPanel])
   const toggleRun = useCallback((id: string) => {
     setOpenRuns(o => {
       const n = new Set(o)
@@ -755,7 +770,7 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
         return (
           <div key={it.id} className="tool-run-wrap">
             {mark}
-            {!f.hidden && (
+            {(
               <ToolRunHead
                 id={it.id}
                 run={f.head}
@@ -787,7 +802,7 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
         <span>Release for a side question</span>
       </div>
     </div>
-    {toolPanel && <ToolDetailsPanel items={toolPanel} onClose={() => setToolPanel(null)} />}
+    {toolPanel && panelItems.length > 0 && <ToolDetailsPanel items={panelItems} onClose={() => setToolPanel(null)} />}
     {railShown && (
       <Scrubber marks={marks} current={Math.min(curMark, marks.length - 1)} rail={rail} pos={railPos} onPick={k => marks[k] && setScrubTo(marks[k].idx)} />
     )}
