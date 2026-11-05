@@ -14,7 +14,7 @@ import { buildCatalog, connectedText, matches, methods, showFields, type Account
 import { toast } from '../store'
 import { DeviceLoginSheet, cliFor, type OAuthProvider } from './Connect'
 import { KeyPoolSection } from './Rotation'
-import { ClaudeSignInSheet, afterSignIn, loadPool, withPoolStatus } from './SignIn'
+import { ClaudeSignInSheet, afterSignIn, loadPool, withPoolStatus, withSharedSubscriptionStatus } from './SignIn'
 import { Sheet, Status, useLoader } from './Screens'
 import { ModelPicker, setProfileModel } from './Settings'
 import { Row, Section, SelectRow } from './ui'
@@ -22,14 +22,22 @@ import { invalidateModelOptions } from '../model-options-cache'
 
 const loadCatalog = async (profile: string) => {
   const p = qs({ profile })
-  const [env, oauth, ends, pool] = await Promise.all([
+  const [env, oauth, ends, pool, mainOauth, mainPool] = await Promise.all([
     api<Record<string, EnvRow>>('GET', `/api/env?${p}`, undefined, { profile: false }),
     api<{ providers: Account[] }>('GET', `/api/providers/oauth?${p}`, undefined, { profile: false }).catch(() => ({ providers: [] as Account[] })),
     api<{ endpoints?: Endpoint[] }>('GET', `/api/providers/custom-endpoints?${p}`, undefined, { profile: false }).catch(() => ({ endpoints: [] as Endpoint[] })),
     // A Claude login lives only in the credential pool: /api/providers/oauth keeps saying not signed in (SignIn.tsx).
-    loadPool(profile).catch(() => ({}))
+    loadPool(profile).catch(() => ({})),
+    profile === 'default'
+      ? Promise.resolve({ providers: [] as Account[] })
+      : api<{ providers: Account[] }>('GET', `/api/providers/oauth?${qs({ profile: 'default' })}`, undefined, { profile: false }).catch(() => ({ providers: [] as Account[] })),
+    profile === 'default' ? Promise.resolve({}) : loadPool('default').catch(() => ({}))
   ])
-  return buildCatalog(env, withPoolStatus(oauth.providers, pool), ends.endpoints || [])
+  const accounts =
+    profile === 'default'
+      ? withPoolStatus(oauth.providers, pool)
+      : withSharedSubscriptionStatus(oauth.providers, pool, mainOauth.providers, mainPool)
+  return buildCatalog(env, accounts, ends.endpoints || [])
 }
 
 const OWN: Preset = { name: '', base_url: '', needs_key: false }
@@ -251,7 +259,9 @@ function ProviderSheet({ entry: e, profile, onClose, onChanged, onTermux, onPick
                 sub={s.on ? `Signed in${s.account.status?.source_label ? ` · ${s.account.status.source_label}` : ''}` : s.kind === 'command' ? <span className="mono small">{s.account.cli_command}</span> : s.kind === 'termux' ? (s.account.id === 'anthropic' ? 'Sign in right here (or in Termux)' : 'Opens Termux for this sign-in') : 'Sign in with a code, right here'}
                 trailing={
                   s.on ? (
-                    s.account.disconnectable ? (
+                    s.account.status?.shared_from_profile ? (
+                      <span className="dim small">Shared</span>
+                    ) : s.account.disconnectable ? (
                       <button className="btn" disabled={busy} onClick={() => signOut(s)}>
                         Sign out
                       </button>

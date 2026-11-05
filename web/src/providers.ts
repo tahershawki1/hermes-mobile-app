@@ -29,7 +29,15 @@ export interface Account {
   cli_command: string
   docs_url?: string
   disconnectable?: boolean
-  status?: { logged_in?: boolean; source_label?: string | null; free_tier?: boolean; error?: string | null }
+  status?: {
+    logged_in?: boolean
+    source?: string | null
+    source_label?: string | null
+    /** A subscription inherited from the phone's main Hermes profile, not stored in this bot. */
+    shared_from_profile?: string | null
+    free_tier?: boolean
+    error?: string | null
+  }
 }
 
 export interface Endpoint {

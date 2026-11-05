@@ -1,0 +1,1 @@
+- **Codex and other subscriptions appear in every bot.** Named bots now show and use OAuth subscriptions such as Codex and Claude from the Main profile without copying refresh grants between profiles. New bots explicitly opt into Hermes's shared-auth behaviour, while API keys and provider settings remain isolated per bot.
