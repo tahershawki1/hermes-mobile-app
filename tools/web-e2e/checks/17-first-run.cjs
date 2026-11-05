@@ -43,6 +43,8 @@ module.exports = async t => {
     await pv.locator('.providers .set-row').first().waitFor({ timeout: 15000 }).catch(() => {})
     const section = t => pv.locator('.providers .set-section', { has: pv.locator('.set-heading', { hasText: t }) })
     const names = async t => (await section(t).locator('.set-row .key-line').allTextContents()).map(x => x.trim())
+    const subscriptions = await section('Subscriptions').locator('.set-row .set-title').allTextContents()
+    check(subscriptions.includes('ChatGPT Plus / Pro or a Codex plan') && subscriptions.includes('Copilot CLI (copilot login)'), `providers: Codex and Copilot have separate subscription rows (${subscriptions.join(', ')})`)
     const pop = await names('Popular')
     check(JSON.stringify(pop) === JSON.stringify(['Anthropic (Claude)', 'OpenAI', 'Google Gemini', 'OpenRouter', 'xAI (Grok)', 'DeepSeek', 'Mistral', 'Groq']), `providers: the big ones first, in order (${pop.join(', ')})`)
     const all = await names('All providers')
@@ -70,6 +72,7 @@ module.exports = async t => {
     // Choose a model: only DeepSeek's models
     await sheet.getByRole('button', { name: 'Choose a model' }).click()
     await pv.locator('.picker-opt', { hasText: 'deepseek-chat' }).waitFor({ timeout: 5000 }).catch(() => {})
+    check((await pv.locator('.model-provider-tab').allTextContents()).join(' ').includes('DeepSeek'), 'providers: the model picker has an explicit provider tab')
     const groups = (await pv.locator('.picker-group').allTextContents()).map(x => x.trim())
     check(JSON.stringify(groups) === JSON.stringify(['DeepSeek']), `providers: the model picker shows only that provider (${groups.join(', ')})`)
     const closeTop = async () => {
@@ -77,7 +80,14 @@ module.exports = async t => {
       await pv.locator('.sheet-backdrop').last().click({ position: { x: 5, y: 5 } })
       await pv.waitForFunction(k => document.querySelectorAll('.sheet-backdrop').length < k, n, { timeout: 3000 }).catch(() => {})
     }
+    await sleep(400)
+    const liveAtFirstOpen = calls().filter(c => c.path === '/api/model/options' && /refresh=true/.test(c.query)).length
     await closeTop() // the model picker
+    await sheet.getByRole('button', { name: 'Choose a model' }).click()
+    await pv.locator('.picker-opt', { hasText: 'deepseek-chat' }).waitFor({ timeout: 5000 }).catch(() => {})
+    await sleep(300)
+    check(calls().filter(c => c.path === '/api/model/options' && /refresh=true/.test(c.query)).length === liveAtFirstOpen, 'providers: reopening the picker reuses the catalog without another live model download')
+    await closeTop()
     await closeTop() // the DeepSeek sheet
     await pv.getByPlaceholder('Search providers (e.g. deepseek, groq)').fill('')
     await section('Connected').locator('.set-row', { hasText: 'DeepSeek' }).waitFor({ timeout: 5000 }).then(() => check(true, 'providers: DeepSeek moves to Connected with its dot'), () => check(false, 'providers: DeepSeek moves to Connected with its dot'))
@@ -86,7 +96,7 @@ module.exports = async t => {
       check(JSON.stringify(on) === JSON.stringify(['DeepSeek']) && (await section('Connected').locator('.dot-set').count()) === 1, `providers: only DeepSeek is connected, with one dot (${on.join(', ')})`)
     }
     // Claude: Pro / Max signs in inside the app (SignIn.tsx; Termux is its fallback); Claude Code's token login is a command to copy
-    await pv.locator('.providers .set-row', { hasText: 'Anthropic (Claude)' }).click()
+    await section('Popular providers').locator('.set-row', { hasText: 'Anthropic (Claude)' }).click()
     const cl = pv.locator('.sheet', { has: pv.locator('.sheet-title', { hasText: 'Anthropic (Claude)' }) })
     check((await cl.getByPlaceholder('Paste API key').count()) === 1, 'providers: Anthropic offers Paste API key')
     check((await cl.locator('.set-row', { hasText: 'claude setup-token' }).getByRole('button', { name: 'Copy command' }).count()) === 1, 'providers: a login that needs another CLI is offered as a command')

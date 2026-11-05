@@ -1,6 +1,5 @@
-// Connecting Hermes to a model provider: a searchable list of every provider the phone's Hermes supports (its own
-// provider catalog, read at runtime: see providers.ts), each with "Paste API key" and/or "Sign in", plus your own
-// OpenAI-compatible server. Used by the first-run model step (Connect.tsx WelcomeBody) and Settings → Model providers.
+// Connecting Hermes to a model provider: subscription accounts are listed separately, followed by a searchable list
+// of every API provider the phone's Hermes supports (its runtime catalog) and the user's own compatible servers.
 //
 // Writes go through the dashboard REST routes Hermes Desktop uses, scoped with ?profile=: keys → PUT/DELETE /api/env
 // (the profile's .env), sign-ins → /api/providers/oauth (device code in the app; Claude in Termux via the bridge's
@@ -19,6 +18,7 @@ import { ClaudeSignInSheet, afterSignIn, loadPool, withPoolStatus } from './Sign
 import { Sheet, Status, useLoader } from './Screens'
 import { ModelPicker, setProfileModel } from './Settings'
 import { Row, Section, SelectRow } from './ui'
+import { invalidateModelOptions } from '../model-options-cache'
 
 const loadCatalog = async (profile: string) => {
   const p = qs({ profile })
@@ -43,6 +43,7 @@ export function ProviderList({ profile, onChange, onPicked }: { profile: string;
   const waitingTermux = useRef(false)
 
   const changed = () => {
+    invalidateModelOptions(profile)
     reload()
     onChange?.()
     void loadDefaultModel()
@@ -57,7 +58,7 @@ export function ProviderList({ profile, onChange, onPicked }: { profile: string;
         .then(list => {
           if (list.find(x => x.id === 'anthropic')?.connected) {
             toast('Signed in to Claude')
-            afterSignIn()
+            afterSignIn(profile)
           } else toast('Claude is not signed in. If Termux showed an error, try again.', 'error', 6000)
         })
         .catch(() => {})
@@ -74,6 +75,7 @@ export function ProviderList({ profile, onChange, onPicked }: { profile: string;
   const popular = shown.filter(e => !e.connected && e.rank < 100)
   const rest = shown.filter(e => !e.connected && e.rank >= 100)
   const open = openId ? list.find(e => e.id === openId) || null : null
+  const subscriptions = shown.flatMap(entry => entry.signIns.map(signIn => ({ entry, signIn })))
 
   const tap = (e: ProviderEntry) => {
     if (e.preset && !e.endpoint) return setCustom(e.preset)
@@ -102,9 +104,25 @@ export function ProviderList({ profile, onChange, onPicked }: { profile: string;
         <input placeholder="Search providers (e.g. deepseek, groq)" value={q} onChange={e => setQ(e.target.value)} />
       </label>
       <Status loading={loading} error={error} empty={!loading && !error && !shown.length} emptyText="No provider matches. Try your own server below." onRetry={reload} />
-      {connected.length > 0 && <Section title={`Connected · ${connected.length}`}>{connected.map(row)}</Section>}
-      {popular.length > 0 && <Section title="Popular">{popular.map(row)}</Section>}
-      {rest.length > 0 && <Section title={q.trim() ? 'More' : `All providers · ${rest.length}`}>{rest.map(row)}</Section>}
+      {subscriptions.length > 0 && (
+        <Section title={`Subscriptions · ${subscriptions.filter(x => x.signIn.on).length}/${subscriptions.length}`} footer="Each subscription is separate. Its models stay under its own provider when you choose a model.">
+          {subscriptions.map(({ entry, signIn }) => (
+            <Row
+              key={signIn.account.id}
+              icon={signIn.account.id === 'openai-codex' ? '◎' : signIn.account.id.includes('copilot') ? 'GH' : '↗'}
+              tone={signIn.on ? 'green' : 'gray'}
+              title={signIn.label}
+              sub={`${entry.name} · ${signIn.on ? `Signed in${signIn.account.status?.source_label ? ` as ${signIn.account.status.source_label}` : ''}` : 'Not signed in'}`}
+              value={signIn.on ? 'Connected' : 'Sign in'}
+              chevron
+              onClick={() => tap(entry)}
+            />
+          ))}
+        </Section>
+      )}
+      {connected.length > 0 && <Section title={`Connected providers · ${connected.length}`}>{connected.map(row)}</Section>}
+      {popular.length > 0 && <Section title="Popular providers">{popular.map(row)}</Section>}
+      {rest.length > 0 && <Section title={q.trim() ? 'More providers' : `All providers · ${rest.length}`}>{rest.map(row)}</Section>}
       {data && (
         <Section title="Your own server" footer="Any OpenAI-compatible API: vLLM, llama.cpp, LocalAI, a company gateway…">
           <Row icon="＋" tone="gold" title="Add an OpenAI-compatible endpoint" sub="Its address, and a key if it needs one" chevron onClick={() => setCustom(OWN)} />
@@ -306,7 +324,7 @@ function ProviderSheet({ entry: e, profile, onClose, onChanged, onTermux, onPick
           onClose={() => setClaude(false)}
           onDone={() => {
             setClaude(false)
-            afterSignIn()
+            afterSignIn(profile)
             onChanged()
           }}
           onTermux={() => {
@@ -331,7 +349,6 @@ function ProviderSheet({ entry: e, profile, onClose, onChanged, onTermux, onPick
         <ModelPicker
           profile={profile}
           target="new chats"
-          refresh
           only={e.slugs}
           onClose={() => setPicking(false)}
           onPick={async (provider, model, effort) => {

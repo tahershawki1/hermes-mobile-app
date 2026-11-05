@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-// Claude sign-in status: Hermes's account list misses a Claude login that lives only in the credential pool (where
-// `hermes auth add anthropic` and the in-app login save it); withPoolStatus fills it in.
+// Subscription sign-in status: Hermes's account list can miss a login that lives only in the credential pool;
+// withPoolStatus fills it in for Claude, Codex and any newer OAuth provider.
 import { describe, expect, test } from 'vitest'
 import { withPoolStatus } from './components/SignIn'
 
@@ -15,11 +15,15 @@ describe('withPoolStatus', () => {
     const pool = { anthropic: [{ label: 'k', auth_type: 'api_key', source: 'env:ANTHROPIC_API_KEY' }, { label: 'claude_code', auth_type: 'oauth', source: 'claude_code' }] }
     expect(withPoolStatus([card('anthropic')], pool)[0].status.logged_in).toBe(false)
   })
-  test("Hermes's own answer wins; other providers are untouched; no pool = unchanged", () => {
+  test('a Codex subscription in the pool marks Codex signed in', () => {
+    const [codex] = withPoolStatus([card('openai-codex')], { 'openai-codex': [{ label: 'ChatGPT Plus', auth_type: 'oauth', source: 'manual:device_code' }] })
+    expect(codex.status).toMatchObject({ logged_in: true, source: 'credential_pool', source_label: 'ChatGPT Plus' })
+  })
+  test("Hermes's own answer wins; an API-key pool entry is ignored; no pool = unchanged", () => {
     const signed = { id: 'anthropic', status: { logged_in: true, source_label: 'Hermes PKCE' } }
     expect(withPoolStatus([signed], { anthropic: [{ label: 'x', auth_type: 'oauth', source: 'manual:hermes_pkce' }] })[0]).toBe(signed)
     const other = card('openai-codex')
-    expect(withPoolStatus([other], { 'openai-codex': [{ auth_type: 'oauth', source: 'manual:device_code' }] })[0]).toBe(other)
+    expect(withPoolStatus([other], { 'openai-codex': [{ auth_type: 'api_key', source: 'env:OPENAI_API_KEY' }] })[0]).toBe(other)
     expect(withPoolStatus([card('anthropic')], {})[0].status.logged_in).toBe(false)
   })
 })

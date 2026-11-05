@@ -20,6 +20,9 @@ These files carry the plumbing every screen uses. Screens are in 3.
   `profile=` unless `profile: false` or the path has one, parses JSON, throws `ApiError` ("Hermes unreachable: …"
   for status 0, the server's `detail` or "HTTP n" for ≥ 400). Also `qs` and `refreshLogins`
   (`POST /refresh-logins`, never throws).
+- `model-options-cache.ts` — one in-memory model catalog per profile for the REST and chat pickers. It deduplicates
+  concurrent catalog loads, allows one live provider refresh every 30 minutes, and invalidates both copies after a
+  key, endpoint or subscription changes, so reopening a picker does not enumerate every provider again.
 - `gateway.ts` — the WebSocket client (`JsonRpcGatewayClient`, 120 s request timeout, own heartbeat off) and
   everything about chats: connect/reconnect/liveness, `rpc`, sessions and profiles, open/new/delete/rename/
   archive/branch, send/steer/slash commands, attachments, model and reasoning, access modes, server requests,
@@ -62,7 +65,7 @@ All go through `rpc` in `gateway.ts`, which adds `profile`. "Used by" = file and
 | `image.attach` | `gateway.ts` `carryAttachments`, `resendFrom` | Re-queues a photo Hermes already has (by path) on a new runtime or for an edited turn. |
 | `image.attach_bytes` | `gateway.ts` `attachFile` | Queues a new photo (base64, ≤ 20 MB) for the next message. |
 | `image.detach` | `gateway.ts` `detachAttachment`, `resendFrom` | Takes a queued photo back out of Hermes's queue. |
-| `model.options` | `components/Sheets.tsx` `ModelSheet`; `components/SignIn.tsx` `afterSignIn` | Model list per provider; first the cached list, then `refresh: true` after `refreshLogins`. |
+| `model.options` | `components/Sheets.tsx` `ModelSheet`; `components/SignIn.tsx` `afterSignIn` | Model list per provider; the in-memory list opens immediately and a live `refresh: true` follows at most once every 30 minutes, or after a changed sign-in. |
 | `profiles.list` | `gateway.ts` `loadProfiles` | Profiles for the drawer's switcher; sent last after connect (slow). |
 | `projects.create` | `components/Screens.tsx` `ProjectsScreen` | New project with one folder, made active. |
 | `projects.delete` | `components/Screens.tsx` `ProjectsScreen` | Delete a project. |

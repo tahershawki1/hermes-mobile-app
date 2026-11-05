@@ -7,18 +7,19 @@ Settings → Model providers and the model step of the first-run flow (3.18) sha
 #### Provider list
 **Opens from:** Settings → Model providers; the model step of the setup flow. **Closes with:** Back (it is part of a page). **Source:** `Providers.tsx` `ProviderList`.
 
-The catalog is built from four calls, each scoped to the bot: `GET /api/env` (keys, with provider tags), `GET /api/providers/oauth` (sign-ins), `GET /api/providers/custom-endpoints` (saved own servers) and `GET /api/credentials/pool` (a Claude login lives only in the credential pool). A failure of the last three degrades quietly to empty.
+The catalog is built from four calls, each scoped to the bot: `GET /api/env` (keys, with provider tags), `GET /api/providers/oauth` (sign-ins), `GET /api/providers/custom-endpoints` (saved own servers) and `GET /api/credentials/pool` (some valid subscription logins, including Claude and Codex, may be visible only there). A failure of the last three degrades quietly to empty.
 
 **Layout, top to bottom:**
 | Element | Looks like | Tap | States |
 |---|---|---|---|
 | Search providers (e.g. deepseek, groq) | Search field | Matches name, id, description, sign-in names, key variable names and addresses | "No provider matches. Try your own server below." |
-| Section Connected · N | Rows of connected providers | Opens the provider sheet | |
-| Section Popular | Not-connected providers from the fixed list Anthropic, OpenAI, Gemini, OpenRouter, xAI, DeepSeek, Mistral, Groq, in that order | Opens the sheet (Mistral and Groq open the endpoint sheet, they are presets) | |
-| Section All providers · N (or More while searching) | The rest, A–Z | Opens the sheet | |
+| Section Subscriptions · connected/total | A separate row for every account sign-in (ChatGPT / Codex, Claude, GitHub Copilot and the others), naming its vendor and exact signed-in source | Opens that subscription's provider sheet | A connected row says Connected; otherwise Sign in. A valid OAuth entry in the credential pool also counts, even when Hermes's OAuth status route misses it. |
+| Section Connected providers · N | Rows of connected API providers and own servers | Opens the provider sheet | |
+| Section Popular providers | Not-connected providers from the fixed list Anthropic, OpenAI, Gemini, OpenRouter, xAI, DeepSeek, Mistral, Groq, in that order | Opens the sheet (Mistral and Groq open the endpoint sheet, they are presets) | |
+| Section All providers · N (or More providers while searching) | The rest, A–Z | Opens the sheet | |
 | Section Your own server (footer: "Any OpenAI-compatible API: vLLM, llama.cpp, LocalAI, a company gateway…") | Row "Add an OpenAI-compatible endpoint", sub "Its address, and a key if it needs one" | Opens the empty endpoint sheet | Only after the catalog loaded |
 
-A provider row has a dot (filled when connected), the name, a sub line (what is connected, or a short description) and, when not connected, how it connects on the right: Key or sign in, API key, Sign in, Set up, or Your endpoint. A provider counts as connected when any of its key variables is set, or (for providers with no key, such as a cloud account) a setting is set, or a sign-in is active (logged in and not a free tier). A vendor's sign-in is grouped with its API key (for example ChatGPT / Codex under OpenAI, Claude Code under Anthropic). Presets Mistral, Groq and Ollama (local) are OpenAI-compatible services Hermes has no provider for; they are saved as custom endpoints, and are not offered once such an endpoint exists or a newer Hermes has the provider.
+A provider row has a dot (filled when connected), the name, a sub line (what is connected, or a short description) and, when not connected, how it connects on the right: Key or sign in, API key, Sign in, Set up, or Your endpoint. A provider counts as connected when any of its key variables is set, or (for providers with no key, such as a cloud account) a setting is set, or a sign-in is active (logged in and not a free tier). The Subscriptions section makes each sign-in visible on its own; opening it reaches the same vendor sheet, where its API-key and sign-in sections remain isolated. Presets Mistral, Groq and Ollama (local) are OpenAI-compatible services Hermes has no provider for; they are saved as custom endpoints, and are not offered once such an endpoint exists or a newer Hermes has the provider.
 
 #### Provider sheet
 **Opens from:** tapping a provider row. **Closes with:** the grip, the backdrop or Back. **Source:** `Providers.tsx` `ProviderSheet`.
