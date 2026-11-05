@@ -1,4 +1,5 @@
 import './HermesPresenceLive.css'
+import { PresenceInk } from './PresenceInk'
 
 /** Expressive status indicator driven by observed session/task state, not private model reasoning. */
 export type PresenceState = 'idle' | 'thinking' | 'working' | 'success' | 'failed' | 'blocked'
@@ -8,6 +9,7 @@ export function HermesPresence({ state = 'idle', size = 'small' }: {
 }) {
   return (
     <span className={`hm-presence ${size} ${state} hm-face-live`} role="img" aria-label={`Hermes: ${state}`}>
+      {(size === 'large' && (state === 'thinking' || state === 'working')) && <PresenceInk />}
       <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
         <circle className="hm-presence-halo" cx="32" cy="32" r="29" />
         <circle className="hm-presence-face" cx="32" cy="32" r="25" />

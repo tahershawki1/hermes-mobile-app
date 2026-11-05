@@ -3907,17 +3907,21 @@ img.inline-frame { display: block; max-width: 100%; max-height: 60vh; margin: 0 
 
 
 /* Hermes presence: expressive, theme-aware, and quiet when idle.
-   Animated parts exist only during a live turn; no JavaScript timers or canvas loops. */
+   The large face may add a lazy p5/p5.brush ink wash; the SVG remains the accessible face. */
 .hm-presence {
   display: inline-grid;
   place-items: center;
+  position: relative;
   width: 28px;
   height: 28px;
   flex: none;
   vertical-align: middle;
+  isolation: isolate;
 }
 .hm-presence.large { width: 112px; height: 112px; }
-.hm-presence svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.hm-presence svg { position: relative; z-index: 1; display: block; width: 100%; height: 100%; overflow: visible; }
+.hm-presence-ink { position: absolute; inset: 0; z-index: 0; display: block; opacity: .7; pointer-events: none; mix-blend-mode: screen; }
+.hm-presence-ink canvas { display: block; width: 100%; height: 100%; }
 .hm-presence-halo { stroke: var(--accent); stroke-width: 1.6; opacity: 0.22; }
 .hm-presence-face { fill: var(--surface-2); stroke: var(--accent); stroke-width: 2.6; }
 .hm-presence-eye { fill: var(--text); transform-box: fill-box; transform-origin: center; }
@@ -4009,4 +4013,11 @@ img.inline-frame { display: block; max-width: 100%; max-height: 60vh; margin: 0 
   .hm-presence.thinking .hm-presence-spark,
   .hm-welcome-avatar,
   .hm-typing i { animation: none; }
+
+  /* Keep every decorative and navigation animation static, including rules added by feature screens. */
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }
