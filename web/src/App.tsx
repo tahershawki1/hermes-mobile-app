@@ -3,7 +3,7 @@ import { remoteDebugStrip, useRemoteDebug } from './remotedebug'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { afterChatOpens, compressChat, connect, errText, fmtCtx, openSessionFromNotification, reconnectNow } from './gateway'
 import { closeScreen, getState, setState, toast, useStore, type ChatItem, type Todo } from './store'
-import { ItemView, TerminalTranscript, ToolRunHead } from './components/ChatItems'
+import { ItemView, TerminalTranscript, ToolCard, ToolRunHead } from './components/ChatItems'
 import { foldMap } from './fold'
 import { turnChanges } from './changes'
 import { TurnChangesCard } from './components/Changes'
@@ -486,6 +486,9 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
   }
   // Runs of tool calls fold into one line; tapping it opens them (keyed by the run's first item id).
   const [openRuns, setOpenRuns] = useState<ReadonlySet<string>>(() => new Set())
+  const [toolPanel, setToolPanel] = useState<Extract<ChatItem, { kind: 'tool' }>[] | null>(null)
+  const showToolPanel = useCallback((tools: Extract<ChatItem, { kind: 'tool' }>[]) => setToolPanel(tools), [])
+  useBackHandler(() => setToolPanel(null), Boolean(toolPanel))
   const folds = useMemo(() => foldMap(items ?? [], openRuns), [items, openRuns])
   const changes = useMemo(() => turnChanges(items ?? [], running), [items, running])
   const toggleRun = useCallback((id: string) => {
@@ -742,7 +745,7 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
         // One element per item, also when folded: search and jump find messages by child index.
         const f = folds.get(start + i)
         const card = changes.get(start + i)
-        const view = <ItemView key={it.id} item={it} actions={!previewing && hasActions(items, start + i)} busy={running || previewing} />
+        const view = <ItemView key={it.id} item={it} actions={!previewing && hasActions(items, start + i)} busy={running || previewing} compactTools onToolOpen={() => showToolPanel([it].filter((x): x is Extract<ChatItem, { kind: 'tool' }> => x.kind === 'tool'))} />
         const mark = start + i === dividerIdx ? <div className="visit-divider" role="separator">New since your last visit</div> : null
         if (!f) {
           if (card) return <div key={it.id} className="turn-end">{mark}{view}<TurnChangesCard changes={card} /></div>
@@ -752,13 +755,14 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
         return (
           <div key={it.id} className="tool-run-wrap">
             {mark}
-            {f.head.names.length === 1 && f.head.names[0] === 'terminal' ? (
-              !f.hidden && <TerminalTranscript items={items.slice(f.head.start, f.head.end).filter((x): x is Extract<ChatItem, { kind: 'tool' }> => x.kind === 'tool')} />
-            ) : (
-              <>
-                <ToolRunHead id={it.id} run={f.head} open={f.open} onToggle={toggleRun} />
-                {!f.hidden && <ItemView item={it} actions={false} busy={running || previewing} />}
-              </>
+            {!f.hidden && (
+              <ToolRunHead
+                id={it.id}
+                run={f.head}
+                open={false}
+                onToggle={toggleRun}
+                onOpen={() => showToolPanel(items.slice(f.head.start, f.head.end).filter((x): x is Extract<ChatItem, { kind: 'tool' }> => x.kind === 'tool'))}
+              />
             )}
             {card && <TurnChangesCard changes={card} />}
           </div>
@@ -783,10 +787,30 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
         <span>Release for a side question</span>
       </div>
     </div>
+    {toolPanel && <ToolDetailsPanel items={toolPanel} onClose={() => setToolPanel(null)} />}
     {railShown && (
       <Scrubber marks={marks} current={Math.min(curMark, marks.length - 1)} rail={rail} pos={railPos} onPick={k => marks[k] && setScrubTo(marks[k].idx)} />
     )}
     </div>
+  )
+}
+
+function ToolDetailsPanel({ items, onClose }: { items: Extract<ChatItem, { kind: 'tool' }>[]; onClose: () => void }) {
+  useBackHandler(onClose)
+  const terminal = items.length > 0 && items.every(item => item.name === 'terminal')
+  return (
+    <aside className="tool-details-panel" role="dialog" aria-label="Activity details">
+      <header className="tool-details-head">
+        <div>
+          <div className="tool-details-kicker">Activity details</div>
+          <h2>What Hermes did</h2>
+        </div>
+        <button className="icon-btn" aria-label="Close activity details" onClick={onClose}>✕</button>
+      </header>
+      <div className="tool-details-body">
+        {terminal ? <TerminalTranscript items={items} /> : items.map(item => <ToolCard key={item.id} item={item} detailsOnly />)}
+      </div>
+    </aside>
   )
 }
 
