@@ -1,0 +1,1 @@
+- **Keep the chat clean.** Live terminal output, tool commands, arguments, and results no longer expand inside the conversation. They appear as compact one-line activity placeholders with an ellipsis; tapping one opens a separate activity panel with the complete execution details. User messages, Hermes replies, and attachments remain visible in the normal ChatGPT-style timeline.

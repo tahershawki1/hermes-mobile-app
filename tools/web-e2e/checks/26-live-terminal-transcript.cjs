@@ -6,6 +6,8 @@ module.exports = async ({ page }) => {
   await input.fill('stream terminal')
   await page.getByRole('button', { name: 'Send', exact: true }).click()
 
+  // Tool activity is intentionally hidden from the clean chat until the user asks to inspect it.
+  await page.locator('.tool-run').first().click()
   const transcript = page.locator('.terminal-transcript')
   await transcript.waitFor({ timeout: 10000 })
   const output = transcript.locator('.terminal-transcript-output')
