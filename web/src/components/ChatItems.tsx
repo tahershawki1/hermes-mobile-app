@@ -51,8 +51,8 @@ function argsPreview(args?: Record<string, unknown> | null): string {
   return typeof first === 'string' ? first : ''
 }
 
-export const ToolCard = memo(function ToolCard({ item }: { item: Extract<ChatItem, { kind: 'tool' }> }) {
-  const [open, setOpen] = useState(() => item.status === 'running' || item.status === 'generating')
+export const ToolCard = memo(function ToolCard({ item, compact = false, detailsOnly = false, onOpen }: { item: Extract<ChatItem, { kind: 'tool' }>; compact?: boolean; detailsOnly?: boolean; onOpen?: () => void }) {
+  const [open, setOpen] = useState(() => detailsOnly || item.status === 'running' || item.status === 'generating')
   const [stored, setStored] = useState<string | null>(() => outputCache.get(item.id) ?? null)
   const [loadingOut, setLoadingOut] = useState(false)
   useEffect(() => {
@@ -78,9 +78,19 @@ export const ToolCard = memo(function ToolCard({ item }: { item: Extract<ChatIte
   const hasDiff = Boolean(item.inlineDiff || out?.diff || memDiff)
   const args = item.args && hasDiff ? Object.fromEntries(Object.entries(item.args).filter(([k]) => !DIFF_DUP_ARGS.has(k))) : item.args
   const icon = TOOL_ICONS[item.name] || '🔧'
+  if (compact) {
+    return (
+      <button className={`tool-placeholder tool-${item.status}`} onClick={() => { haptic(); onOpen?.() }} aria-label={`Show details for ${item.name}`}>
+        <span className="tool-icon">{icon}</span>
+        <span className="tool-placeholder-label">{item.context || (item.name === 'phone_app' ? phoneAppLabel(item.args) : '') || argsPreview(item.args) || item.name}</span>
+        <span className="tool-placeholder-state">{item.status === 'running' || item.status === 'generating' ? <Spinner small /> : item.status === 'error' ? '✕' : '✓'}</span>
+        <span className="tool-placeholder-more">…</span>
+      </button>
+    )
+  }
   return (
     <div className={`tool tool-${item.status}${item.risk ? ' tool-risk' : ''}`}>
-      <button className="tool-head" onClick={() => setOpen(o => !o)} aria-expanded={open}>
+      <button className="tool-head" onClick={() => { if (onOpen) { onOpen(); return } setOpen(o => !o) }} aria-expanded={open}>
         <span className="tool-icon">{icon}</span>
         <span className="tool-name">{item.name}</span>
         <span className="tool-label">{label}</span>
@@ -176,9 +186,9 @@ export const TerminalTranscript = memo(function TerminalTranscript({ items }: { 
 })
 
 /** The line a folded run of tool calls shows: icons of the tools used, "Ran 7 tools · 42s", a chevron. */
-export const ToolRunHead = memo(function ToolRunHead({ id, run, open, onToggle }: { id: string; run: ToolRun; open: boolean; onToggle: (id: string) => void }) {
+export const ToolRunHead = memo(function ToolRunHead({ id, run, open, onToggle, onOpen }: { id: string; run: ToolRun; open: boolean; onToggle: (id: string) => void; onOpen?: () => void }) {
   return (
-    <button className={`tool-run${run.running ? ' running' : ''}`} aria-expanded={open} onClick={() => { haptic(); onToggle(id) }}>
+    <button className={`tool-run${run.running ? ' running' : ''}`} aria-expanded={open} onClick={() => { haptic(); onOpen ? onOpen() : onToggle(id) }}>
       <span className="tool-run-icons" aria-hidden="true">
         {run.names.slice(0, 4).map(n => (
           <span key={n} className="tool-icon">{TOOL_ICONS[n] || '🔧'}</span>
@@ -455,14 +465,14 @@ function SpeakBtn({ id, text }: { id: string; text: string }) {
   )
 }
 
-export const ItemView = memo(function ItemView({ item, actions = false, busy = false }: { item: ChatItem; actions?: boolean; busy?: boolean }) {
+export const ItemView = memo(function ItemView({ item, actions = false, busy = false, compactTools = false, onToolOpen }: { item: ChatItem; actions?: boolean; busy?: boolean; compactTools?: boolean; onToolOpen?: () => void }) {
   switch (item.kind) {
     case 'user':
       return <UserMsg item={item} actions={actions} busy={busy} />
     case 'assistant':
       return <AssistantMsg item={item} actions={actions} busy={busy} />
     case 'tool':
-      return <ToolCard item={item} />
+      return <ToolCard item={item} compact={compactTools} onOpen={onToolOpen} />
     case 'subagent':
       return <SubagentView item={item} />
     case 'notice':
