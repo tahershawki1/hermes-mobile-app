@@ -35,6 +35,7 @@ export function BotsScreen() {
   const { data, error, loading, reload, setData } = useLoader(loadAll, [])
   const [creating, setCreating] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
+  const [modelFor, setModelFor] = useState<string | null>(null)
 
   const profiles = data?.profiles || []
   const current = open ? profiles.find(p => p.name === open) : null
@@ -72,7 +73,24 @@ export function BotsScreen() {
             setCreating(false)
             reload()
             void loadProfiles()
-            setOpen(name)
+            // A new bot should not make the user hunt through Settings before it can chat.
+            setModelFor(name)
+          }}
+        />
+      )}
+      {modelFor && (
+        <ModelPicker
+          profile={modelFor}
+          target={modelFor}
+          onClose={() => {
+            setModelFor(null)
+            setOpen(modelFor)
+          }}
+          onPick={async (provider, model, effort) => {
+            await setProfileModel(modelFor, provider, model, effort)
+            toast(`${modelFor} → ${model}`)
+            reload()
+            await loadProfiles()
           }}
         />
       )}

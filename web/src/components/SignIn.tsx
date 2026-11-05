@@ -1,18 +1,18 @@
-// Signing in to Claude (a Pro / Max subscription) and telling the user whether it worked.
+// Subscription status shared by every provider, plus signing in to Claude (Pro / Max) in the app.
 //
 // Hermes's dashboard has no Claude sign-in of its own (only `hermes auth add anthropic` in a terminal), so the app
 // uses the Hermes Mobile plugin's /claude-login routes: the same PKCE login, split in two (claude_login.py). The user
 // opens claude.ai in the browser, signs in, copies the code Claude shows and pastes it here. Termux stays as the
 // fallback (older plugin, or the user prefers it).
 //
-// Whether Claude is signed in: Hermes's /api/providers/oauth only looks at ~/.hermes/.anthropic_oauth.json and API key
-// variables for its Anthropic card, but `hermes auth add anthropic` (and this login) save to the credential pool, so
-// that card kept saying "not signed in" after a successful login. The pool (/api/credentials/pool) is read too.
+// Hermes's /api/providers/oauth can miss a login that is valid in the credential pool (Claude and, on some builds,
+// Codex). The pool (/api/credentials/pool) is therefore the fallback source of truth for every OAuth provider.
 import { useEffect, useRef, useState } from 'react'
 import { api, qs } from '../api'
 import { haptic, openExternal } from '../bridge'
 import { errText, loadDefaultModel, rpc } from '../gateway'
 import { toast } from '../store'
+import { invalidateModelOptions } from '../model-options-cache'
 import { Sheet } from './Screens'
 import { Spinner } from './Spinner'
 
@@ -46,20 +46,22 @@ export const loadPool = (profile: string): Promise<Record<string, PoolEntry[]>> 
     .then(r => Object.fromEntries((r?.providers || []).map(p => [p.provider, p.entries || []])))
     .catch(() => ({}))
 
-/** A Claude-subscription login Hermes will use: an OAuth pool entry (Claude Code's own login has its own card). */
-const claudeLogin = (pool: Record<string, PoolEntry[]>) => (pool.anthropic || []).find(e => e.auth_type === 'oauth' && e.source !== 'claude_code')
+/** A subscription login Hermes will use. Provider-owned CLI logins keep their own card and API keys do not count. */
+const subscriptionLogin = (provider: string, pool: Record<string, PoolEntry[]>) =>
+  (pool[provider] || []).find(e => e.auth_type === 'oauth' && !(provider === 'anthropic' && e.source === 'claude_code'))
 
-/** Fills in "signed in" for logins Hermes's account list doesn't see (Claude in the credential pool). */
+/** Fills in "signed in" when Hermes's account list misses a valid subscription stored in the credential pool. */
 export function withPoolStatus<P extends { id: string; status?: Status }>(providers: P[], pool: Record<string, PoolEntry[]>): P[] {
   return providers.map(p => {
-    if (p.id !== 'anthropic' || p.status?.logged_in) return p
-    const e = claudeLogin(pool)
+    if (p.status?.logged_in) return p
+    const e = subscriptionLogin(p.id, pool)
     return e ? { ...p, status: { ...p.status, logged_in: true, source: 'credential_pool', source_label: e.label || null } } : p
   })
 }
 
 /** After a new login: the default model, and the live model list once so the new models show up in the pickers. */
-export function afterSignIn(): void {
+export function afterSignIn(profile = 'default'): void {
+  invalidateModelOptions(profile)
   void loadDefaultModel()
   void rpc('model.options', { refresh: true }).catch(() => {})
 }

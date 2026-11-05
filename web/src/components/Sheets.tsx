@@ -22,6 +22,7 @@ import { DiffView } from './Diff'
 import { useBackHandler } from '../backstack'
 import { Spinner } from './Spinner'
 import { fmtCost } from '../ctxring'
+import { cachedModelOptions, chatModelKey, fetchModelOptions, modelOptionsNeedLiveRefresh } from '../model-options-cache'
 
 function Shell({ title, children, onClose }: { title: string; children: React.ReactNode; onClose?: () => void }) {
   const close = onClose ?? (() => setState({ sheet: null }))
@@ -39,24 +40,31 @@ function Shell({ title, children, onClose }: { title: string; children: React.Re
 
 export function ModelSheet() {
   const active = useStore(s => s.active)
-  const [data, setData] = useState<ModelOptionsResult | null>(null)
+  const profile = useStore(s => s.profile)
+  const cacheKey = chatModelKey(profile)
+  const [data, setData] = useState<ModelOptionsResult | null>(() => cachedModelOptions<ModelOptionsResult>(cacheKey))
   const [q, setQ] = useState('')
   const [err, setErr] = useState('')
+  const [provider, setProvider] = useState('')
   useEffect(() => {
-    // A plain open reads Hermes's disk cache of each provider's catalog (stale after a new login or new models):
-    // show it at once, then swap in the live list.
+    // Keep the provider catalog in memory. Opening this sheet repeatedly must not make every provider enumerate
+    // its remote models again; a live refresh happens at most once per 30 minutes.
     let gone = false
-    rpc<ModelOptionsResult>('model.options', { session_id: active?.runtimeId })
-      .then(r => !gone && setData(r))
-      .catch(e => setErr(errText(e)))
-    refreshLogins()
-      .then(() => rpc<ModelOptionsResult>('model.options', { session_id: active?.runtimeId, refresh: true }))
-      .then(r => !gone && setData(r))
-      .catch(() => {})
+    const cached = cachedModelOptions<ModelOptionsResult>(cacheKey)
+    if (cached) setData(cached)
+    else
+      fetchModelOptions(cacheKey, false, () => rpc<ModelOptionsResult>('model.options', { session_id: active?.runtimeId }))
+        .then(r => !gone && setData(cachedModelOptions<ModelOptionsResult>(cacheKey) || r))
+        .catch(e => !gone && setErr(errText(e)))
+    if (modelOptionsNeedLiveRefresh(cacheKey))
+      refreshLogins()
+        .then(() => fetchModelOptions(cacheKey, true, () => rpc<ModelOptionsResult>('model.options', { session_id: active?.runtimeId, refresh: true })))
+        .then(r => !gone && (setData(r), setErr('')))
+        .catch(() => {})
     return () => {
       gone = true
     }
-  }, [active?.runtimeId])
+  }, [active?.runtimeId, cacheKey])
   const currentModel = active?.info.model || data?.model
   const currentProvider = active?.info.provider || data?.provider
   const defaultEffort = useStore(s => s.defaultEffort)
@@ -69,13 +77,21 @@ export function ModelSheet() {
     const isCur = (p: { slug: string; is_current?: boolean | null }) => Number(Boolean(p.is_current) || p.slug === currentProvider?.replace(/^custom:/, ''))
     return withCustoms((data?.providers || []).filter(p => p.authenticated !== false || p.is_current), customs).sort((a, b) => isCur(b) - isCur(a))
   }, [data, customs, currentProvider])
+  useEffect(() => {
+    if (!connected.length) return setProvider('')
+    if (connected.some(p => p.slug === provider)) return
+    const cur = currentProvider?.replace(/^custom:/, '')
+    setProvider(connected.find(p => p.slug === cur)?.slug || connected[0].slug)
+  }, [connected, provider, currentProvider])
+  const selected = connected.find(p => p.slug === provider) || null
   const providers = useMemo(() => {
     const needle = q.trim().toLowerCase()
     return connected
+      .filter(p => p.slug === provider)
       .map(p => ({ ...p, models: (p.models || []).filter(m => !needle || m.toLowerCase().includes(needle) || p.name.toLowerCase().includes(needle)) }))
       .filter(p => p.models.length)
-  }, [connected, q])
-  // A typed id no provider lists: offer it under every connected provider (Hermes Desktop's "Custom model").
+  }, [connected, provider, q])
+  // A typed id no provider lists: offer it only for the provider the user deliberately selected.
   const typed = data ? customCandidate(q, connected) : null
   const favs = useFavs()
   // Starred models first, in the order starred; only those this profile can use now (and that match the search).
@@ -149,6 +165,16 @@ export function ModelSheet() {
           </button>
         ))}
       </div>
+      {connected.length > 0 && (
+        <div className="model-provider-tabs" role="tablist" aria-label="Model provider">
+          {connected.map(p => (
+            <button key={p.slug} role="tab" aria-selected={p.slug === provider} className={`model-provider-tab${p.slug === provider ? ' on' : ''}`} onClick={() => { haptic(); setProvider(p.slug); setQ('') }}>
+              <span>{p.name}</span>
+              <small>{(p.models || []).length} models</small>
+            </button>
+          ))}
+        </div>
+      )}
       <input className="search" placeholder="Search models…" value={q} onChange={e => setQ(e.target.value)} />
       <div className="sheet-scroll">
         {err && <div className="notice notice-error">{err}</div>}
@@ -168,17 +194,15 @@ export function ModelSheet() {
             {p.models.map(m => row(p, m))}
           </div>
         ))}
-        {typed && connected.length > 0 && (
+        {typed && selected && (
           <div className="group typed-group">
             <div className="group-title">Use “{typed}”</div>
-            {connected.map(p => (
-              <div key={p.slug} className="row model-row">
-                <button className="model-pick" aria-label={`Use ${typed} with ${p.name}`} onClick={() => pick(p.slug, typed, true)}>
-                  <span className="model-name">{typed}</span>
-                  <span className="dim model-sub">{p.name}</span>
-                </button>
-              </div>
-            ))}
+            <div className="row model-row">
+              <button className="model-pick" aria-label={`Use ${typed} with ${selected.name}`} onClick={() => pick(selected.slug, typed, true)}>
+                <span className="model-name">{typed}</span>
+                <span className="dim model-sub">{selected.name}</span>
+              </button>
+            </div>
           </div>
         )}
         {data && !q && <div className="dim small pad">Missing a model? Type its exact name in the search box to use it.</div>}

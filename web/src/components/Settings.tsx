@@ -30,6 +30,7 @@ import { FallbackSection } from './Rotation'
 import { HermesSettingsPage } from './HermesSettings'
 import { onlySlugs } from '../providers'
 import { addCustom, customCandidate, useCustoms, withCustoms } from '../custommodels'
+import { cachedModelOptions, fetchModelOptions, modelOptionsNeedLiveRefresh, restModelKey } from '../model-options-cache'
 
 // ── shared ───────────────────────────────────────────────────
 
@@ -69,38 +70,50 @@ export async function setProfileModel(profile: string, provider: string, model: 
 /** Provider → model picker for a profile. `target` is shown in the title. */
 /** `noEffort` hides the reasoning pills (a fallback model has no reasoning level of its own here). */
 export function ModelPicker({ profile, target, onPick, onClose, refresh, only, noEffort }: { profile: string; target: string; onPick: (provider: string, model: string, effort: string) => Promise<void>; onClose: () => void; refresh?: boolean; only?: string[]; noEffort?: boolean }) {
-  const [data, setData] = useState<ModelOptions | null>(null)
+  const cacheKey = restModelKey(profile)
+  const [data, setData] = useState<ModelOptions | null>(() => cachedModelOptions<ModelOptions>(cacheKey))
   const [err, setErr] = useState('')
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
   const [effort, setEffort] = useState('medium')
+  const [provider, setProvider] = useState('')
   useEffect(() => {
-    // `refresh` right after a new sign-in or key: Hermes's 1 h model-list cache doesn't know that provider yet.
-    // Cached list first (instant), then a live one so models released since the cache was written show up.
+    // A provider can ask a slow remote API for its catalog. Reuse the in-app copy and make at most one live
+    // refresh per 30 minutes (or immediately after a sign-in/key change invalidated it).
     let gone = false
     const load = (live: boolean) => api<ModelOptions>('GET', `/api/model/options?${qs({ profile, ...(live ? { refresh: 'true' } : {}) })}`, undefined, { profile: false })
-    if (refresh) load(true).then(setData).catch(e => setErr(errText(e)))
-    else {
-      load(false).then(r => !gone && setData(r)).catch(e => setErr(errText(e)))
-      refreshLogins().then(() => load(true)).then(r => !gone && (setData(r), setErr(''))).catch(() => {})
-    }
+    const cached = cachedModelOptions<ModelOptions>(cacheKey)
+    if (cached) setData(cached)
+    else fetchModelOptions(cacheKey, false, () => load(false)).then(r => !gone && setData(cachedModelOptions<ModelOptions>(cacheKey) || r)).catch(e => !gone && setErr(errText(e)))
+    if (refresh || modelOptionsNeedLiveRefresh(cacheKey))
+      refreshLogins()
+        .then(() => fetchModelOptions(cacheKey, true, () => load(true)))
+        .then(r => !gone && (setData(r), setErr('')))
+        .catch(() => {})
     return () => {
       gone = true
     }
-  }, [profile, refresh])
+  }, [profile, refresh, cacheKey])
   const cur = (data?.provider || '').replace(/^custom:/, '')
   const customs = useCustoms()
   const connected = useMemo(
     () => withCustoms(onlySlugs((data?.providers || []).filter(p => p.authenticated !== false), only), customs).sort((a, b) => Number(b.slug === cur) - Number(a.slug === cur)),
     [data, only, customs, cur]
   )
+  useEffect(() => {
+    if (!connected.length) return setProvider('')
+    if (connected.some(p => p.slug === provider)) return
+    setProvider(connected.find(p => p.slug === cur)?.slug || connected[0].slug)
+  }, [connected, provider, cur])
+  const selected = connected.find(p => p.slug === provider) || null
   const providers = useMemo(() => {
     const needle = q.trim().toLowerCase()
     return connected
+      .filter(p => p.slug === provider)
       .map(p => ({ ...p, models: (p.models || []).filter(m => !needle || m.toLowerCase().includes(needle) || p.name.toLowerCase().includes(needle)) }))
       .filter(p => p.models.length)
-  }, [connected, q])
-  // A typed id no provider lists: offer it under every connected provider; remembered once picked.
+  }, [connected, provider, q])
+  // A typed id the selected provider does not list: offer it only there, then remember it once picked.
   const typed = data ? customCandidate(q, connected) : null
   const pick = (slug: string, m: string, remember = false) => {
     haptic()
@@ -117,6 +130,16 @@ export function ModelPicker({ profile, target, onPick, onClose, refresh, only, n
           {REASONING_EFFORT_VALUES.map(e => (
             <button key={e} className={`pill${e === effort ? ' on' : ''}`} onClick={() => { haptic(); setEffort(e) }}>
               {e}
+            </button>
+          ))}
+        </div>
+      )}
+      {connected.length > 0 && (
+        <div className="model-provider-tabs" role="tablist" aria-label="Model provider">
+          {connected.map(p => (
+            <button key={p.slug} role="tab" aria-selected={p.slug === provider} className={`model-provider-tab${p.slug === provider ? ' on' : ''}`} onClick={() => { haptic(); setProvider(p.slug); setQ('') }}>
+              <span>{p.name}</span>
+              <small>{(p.models || []).length} models</small>
             </button>
           ))}
         </div>
@@ -150,17 +173,15 @@ export function ModelPicker({ profile, target, onPick, onClose, refresh, only, n
             })}
           </div>
         ))}
-        {typed && connected.length > 0 && (
+        {typed && selected && (
           <div className="picker-block typed-group">
             <div className="picker-group">Use “{typed}”</div>
-            {connected.map(p => (
-              <button key={p.slug} className="picker-opt" disabled={busy} aria-label={`Use ${typed} with ${p.name}`} onClick={() => pick(p.slug, typed, true)}>
-                <span className="set-text">
-                  <span className="set-title">{typed}</span>
-                  <span className="set-sub">{p.name}</span>
-                </span>
-              </button>
-            ))}
+            <button className="picker-opt" disabled={busy} aria-label={`Use ${typed} with ${selected.name}`} onClick={() => pick(selected.slug, typed, true)}>
+              <span className="set-text">
+                <span className="set-title">{typed}</span>
+                <span className="set-sub">{selected.name}</span>
+              </span>
+            </button>
           </div>
         )}
         {data && !q && providers.length > 0 && <div className="dim small pad">Missing a model? Type its exact name in the search box to use it.</div>}
@@ -193,7 +214,17 @@ export function ProfileChips({ value, onChange, all, label = 'Bot' }: { value: s
 
 /** Run `fn` for one profile or every profile ("*"), collecting failures into one toast. */
 export async function forProfiles(target: string, fn: (profile: string) => Promise<unknown>): Promise<boolean> {
-  const names = target === '*' ? getState().profiles.map(p => p.name) : [target]
+  let names = target === '*' ? getState().profiles.map(p => p.name) : [target]
+  // Settings can open before the slower profiles.list RPC has answered. Previously "All bots" then ran over an
+  // empty array, closed the picker and changed nothing. Wait for that list once before applying the model.
+  if (target === '*' && !names.length) {
+    await loadProfiles()
+    names = getState().profiles.map(p => p.name)
+  }
+  if (!names.length) {
+    toast('No bots found. Try again after Hermes finishes loading.', 'error')
+    return false
+  }
   const failed: string[] = []
   for (const n of names) {
     try {
