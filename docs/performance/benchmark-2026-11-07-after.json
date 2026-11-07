@@ -1,0 +1,110 @@
+{
+  "schema": "hermes-mobile-phone-benchmark-v1",
+  "generated_at": "2026-11-07T04:44:56.181249+00:00",
+  "runs_requested": 10,
+  "device_access": "Shizuku rish",
+  "privacy": "No chat text, tokens, identifiers, paths, screenshots, or raw command output collected.",
+  "health_latency": {
+    "runs": 10,
+    "median_ms": 2116.36,
+    "p95_ms": 3007.58,
+    "min_ms": 960.29,
+    "max_ms": 3124.44
+  },
+  "plugin_route_latency": {
+    "runs": 10,
+    "median_ms": 2211.58,
+    "p95_ms": 2484.45,
+    "min_ms": 1018.84,
+    "max_ms": 2608.78
+  },
+  "chat_latency": {
+    "status": "not_measured",
+    "reason": "The connected shell exposes HTTP but no websocket-capable client; HTTP health must not be presented as chat latency."
+  },
+  "tool_execution_latency": {
+    "status": "not_measured",
+    "reason": "A real tool turn requires the same websocket RPC path; no substitute endpoint was used."
+  },
+  "ram_pss_mb": {
+    "runs": 10,
+    "median_mb": 79.99,
+    "p95_mb": 80.05,
+    "samples_mb": [
+      80.03,
+      80.07,
+      80.01,
+      80.01,
+      79.99,
+      79.99,
+      79.99,
+      79.99,
+      79.09,
+      79.08
+    ]
+  },
+  "battery": {
+    "samples": [
+      {
+        "level_percent": 81,
+        "temperature_c": 36.3,
+        "voltage_mv": 4115
+      },
+      {
+        "level_percent": 81,
+        "temperature_c": 36.3,
+        "voltage_mv": 4115
+      },
+      {
+        "level_percent": 81,
+        "temperature_c": 36.3,
+        "voltage_mv": 4115
+      },
+      {
+        "level_percent": 80,
+        "temperature_c": 36.2,
+        "voltage_mv": 4124
+      },
+      {
+        "level_percent": 80,
+        "temperature_c": 36.1,
+        "voltage_mv": 4110
+      },
+      {
+        "level_percent": 80,
+        "temperature_c": 36.1,
+        "voltage_mv": 4110
+      },
+      {
+        "level_percent": 80,
+        "temperature_c": 36.1,
+        "voltage_mv": 4110
+      },
+      {
+        "level_percent": 80,
+        "temperature_c": 36.0,
+        "voltage_mv": 4118
+      },
+      {
+        "level_percent": 80,
+        "temperature_c": 36.0,
+        "voltage_mv": 4118
+      },
+      {
+        "level_percent": 80,
+        "temperature_c": 36.0,
+        "voltage_mv": 4118
+      }
+    ],
+    "start": {
+      "level_percent": 81,
+      "temperature_c": 36.3,
+      "voltage_mv": 4115
+    },
+    "end": {
+      "level_percent": 80,
+      "temperature_c": 36.0,
+      "voltage_mv": 4118
+    }
+  }
+}
