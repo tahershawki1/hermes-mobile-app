@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "engineRepository": "https://github.com/tahershawki1/hermes-agent",
+  "engineCommit": "b8a8be185d6e88b35e0a4fa794fea64fb06ed85b",
+  "engineVersion": "0.21.5+4582.gb8a8be1",
+  "minimumAndroidApi": 26,
+  "rollback": "retain_previous_install_until_health_check_passes",
+  "notes": "Runtime installation and updates use the owner-controlled repository only."
+}

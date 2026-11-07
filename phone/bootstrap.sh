@@ -217,7 +217,7 @@ else
   # The pin's own installer script (not the hosted one), so the install is reproducible: the hosted one changes over time.
   # Downloaded to a file first: piped into bash, a failed download (GitHub answers 429 when busy) ran an empty script and
   # "succeeded". --retry also covers 429/5xx.
-  hermes_install() { deb "curl -fsSL --retry 4 --retry-delay 15 -o /root/hermes-install.sh https://raw.githubusercontent.com/NousResearch/hermes-agent/$HERMES_COMMIT/scripts/install.sh && bash /root/hermes-install.sh --non-interactive --commit $HERMES_COMMIT"; }  # hex only: no quotes (deb() wraps this in bash -lc "...")
+  hermes_install() { deb "HERMES_REPO_URL=https://github.com/tahershawki1/hermes-agent.git curl -fsSL --retry 4 --retry-delay 15 -o /root/hermes-install.sh https://raw.githubusercontent.com/tahershawki1/hermes-agent/$HERMES_COMMIT/scripts/install.sh && HERMES_REPO_URL=https://github.com/tahershawki1/hermes-agent.git bash /root/hermes-install.sh --non-interactive --branch main --commit $HERMES_COMMIT"; }  # hex only: no quotes (deb() wraps this in bash -lc "...")
   if ! hermes_install; then
     # Under proot, uv's freshly downloaded Python reports its real Android path as sys.prefix, so
     # `uv python find --managed-python` rejects it and Hermes's installer stops ("bootstrap Python lookup failed").
