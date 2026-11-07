@@ -70,6 +70,17 @@ find "$here/hermes-plugin/hermes-mobile" -name __pycache__ -prune -exec rm -rf {
   rm -rf "${p}plugins/hermes-mobile" && ln -s /root/.hermes/plugins/hermes-mobile "${p}plugins/hermes-mobile"; done' \
   || echo "    Could not add the plugin to every Hermes profile."
 
+# Point the installed engine at our complete GitHub mirror, not the upstream repository.
+# Keep the existing working engine untouched if the mirror workflow has not populated the branch yet.
+ENGINE_REPO="$REPO.git"
+if git ls-remote --exit-code "$ENGINE_REPO" refs/heads/hermes-engine >/dev/null 2>&1; then
+  "$DEB" bash -lc "git -C /root/.hermes/hermes-agent remote set-url origin '$ENGINE_REPO'" \
+    || die "Could not switch Hermes engine origin to the independent mirror"
+  echo "    Hermes engine origin: $ENGINE_REPO (hermes-engine)"
+else
+  echo "    WARNING: hermes-engine mirror is not published yet; keeping installed engine intact."
+fi
+
 # Our fixes to Hermes itself (hermes/README.md). One that no longer fits this Hermes is skipped, never half-applied.
 echo "    Applying the Hermes Mobile fixes to Hermes (hermes/patches)"
 "$DEB" --put "$here/hermes/patches" /root/.hermes/hermes-mobile-patches
