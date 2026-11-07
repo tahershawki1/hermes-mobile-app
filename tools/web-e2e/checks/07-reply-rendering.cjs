@@ -313,6 +313,12 @@ module.exports = async t => {
     check(opened.includes('https://example.com/b') && (!toolOutputOpened || opened.includes('https://example.com/a')) && opened.includes('https://example.com/c'), `tapping links opens them (${JSON.stringify(opened)})`)
     check((await page.locator('.msg.user .msg-time').count()) === 0, 'a link tap does not toggle the message time')
     await page.evaluate(() => { window.open = window.__realOpen })
+    // Leave the migrated activity-details overlay closed so the next scenario can use the composer.
+    const closeActivity = page.getByRole('button', { name: 'Close activity details' })
+    if (await closeActivity.count() && await closeActivity.isVisible().catch(() => false)) {
+      await closeActivity.click()
+      await page.locator('.tool-details-panel').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {})
+    }
   }
 
   // ── KaTeX and highlight.js ship as inert text too (hm-rich) and run on the first message with math or code ──
