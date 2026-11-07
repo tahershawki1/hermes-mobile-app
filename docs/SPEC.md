@@ -87,5 +87,6 @@ where, and what is still open, is in [docs/improvements.md](improvements.md) and
   - [7.4 Workflows (`.github/workflows/`)](spec/07-04-workflows.md)
   - [7.5 Versioning and releases](spec/07-05-versioning-and-releases.md)
   - [7.6 Docs for contributors and agents](spec/07-06-docs-for-contributors-and-agents.md)
+  - [7.7 Phone performance benchmark](spec/07-07-phone-performance-benchmark.md)
 - [8. Feature index](spec/08-feature-index.md)
 - [9. Glossary](spec/09-glossary.md)
