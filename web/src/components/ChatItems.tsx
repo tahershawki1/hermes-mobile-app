@@ -1,6 +1,6 @@
 import { useTextDirection } from '../text-direction'
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
-import { type ChatItem, toast } from '../store'
+import { type ChatItem, toast, useStore } from '../store'
 import { branchAt, filesOf, imagesOf, resendFrom, retryTurn, type MsgFile, type MsgImage } from '../gateway'
 import { Markdown } from './Markdown'
 import { copyRich, copyText, haptic } from '../bridge'
@@ -484,11 +484,27 @@ export const ItemView = memo(function ItemView({ item, actions = false, busy = f
   }
 })
 
+/** Turn timer: live while generating, persisted duration from Hermes turn stats after completion. */
+function ReplyTimer({ item }: { item: Extract<ChatItem, { kind: 'assistant' }> }) {
+  const turnStart = useStore(s => s.active?.turnStart ?? null)
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!item.streaming || !turnStart) return
+    const tick = () => { if (document.visibilityState === 'visible') setNow(Date.now()) }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [item.streaming, turnStart])
+  const saved = item.meta?.split(' · ').find(part => /^\\d+(?:\\.\\d+)?\\s*(?:ms|s|m|h)(?:\\s|$)/.test(part))
+  const label = item.streaming && turnStart ? fmtDuration(Math.max(0, (now - turnStart) / 1000)) : saved
+  return label ? <span className="dim small hm-reply-timer" title="Time spent generating this reply" aria-label={`Reply time ${label}`}>⏱ {label}</span> : null
+}
+
 function AssistantMsg({ item, actions, busy }: { item: Extract<ChatItem, { kind: 'assistant' }>; actions: boolean; busy: boolean }) {
   const time = useTimeTap(item.streaming ? undefined : item.at)
   return (
         <div className="msg assistant" onClick={time.toggle}>
-          <div className="hm-assistant-byline"><HermesPresence state={item.streaming ? 'thinking' : 'idle'} /><span>Hermes</span>{item.streaming && <span className="hm-replying">Replying</span>}</div>
+          <div className="hm-assistant-byline"><HermesPresence state={item.streaming ? 'thinking' : 'idle'} /><span>Hermes</span><ReplyTimer item={item} />{item.streaming && <span className="hm-replying">Replying</span>}</div>
           <Reasoning text={item.reasoning} live={item.streaming && !item.text} />
           {item.text && <Markdown text={item.text} streaming={item.streaming} interactive />}
           {item.streaming && item.text && <span className="caret" />}
