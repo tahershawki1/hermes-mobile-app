@@ -939,6 +939,7 @@ textarea {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  touch-action: pan-y;
   display: flex;
   flex-direction: column;
   align-items: center;
