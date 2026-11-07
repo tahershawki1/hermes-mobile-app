@@ -27,11 +27,8 @@ jobs:
           test -f .github/workflows/mirror-hermes-engine.yml
           git cat-file -e refs/remotes/hermes-upstream/main^{commit}
       - name: Publish full engine source to independent hermes-engine branch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" \
-            push --force origin refs/remotes/hermes-upstream/main:refs/heads/hermes-engine
+          git push --force origin refs/remotes/hermes-upstream/main:refs/heads/hermes-engine
       - name: Confirm mirrored engine commit
         run: |
           expected=$(git rev-parse refs/remotes/hermes-upstream/main)
