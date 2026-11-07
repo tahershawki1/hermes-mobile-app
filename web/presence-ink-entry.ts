@@ -19,8 +19,8 @@ function mount(root: HTMLElement, active: boolean): { remove: () => void } {
     p.draw = () => {
       p.clear()
       const color = getComputedStyle(root).getPropertyValue('--accent').trim() || '#d9a441'
-      brush.refreshField(p.frameCount / 18)
       brush.field('waves')
+      brush.refreshField(p.frameCount / 18)
       brush.set('HB', color, 1.25)
       const radius = 33 + Math.sin(p.frameCount / 18) * 2.8
       for (let i = 0; i < 8; i += 1) {
