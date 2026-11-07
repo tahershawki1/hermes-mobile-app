@@ -1900,11 +1900,16 @@ function turnStartSecs(): number | null {
 async function finishTurnStats(itemId: string | null, usage?: Usage | null, secs: number | null = null): Promise<void> {
   const reported = usage?.avg_tps && usage.avg_tps > 0 ? Math.round(usage.avg_tps) : null
   const tps = reported ?? (stream.ms > 400 ? estTps() : wallTps())
-  const ctx = await refreshCtx(usage)
-  const parts = [tps ? `${reported ? '' : '~'}${tps} tok/s` : '', secs != null && secs >= 1 ? fmtDuration(secs) : '', ctx ? fmtCtx(ctx) : ''].filter(Boolean)
-  if (!itemId || !parts.length) return
+  // Publish the elapsed time immediately; refreshing context can take another dashboard round trip.
+  // A slow context refresh must not hold the user's completed-reply timer hostage.
+  const baseParts = [tps ? `${reported ? '' : '~'}${tps} tok/s` : '', secs != null ? fmtDuration(secs) : ''].filter(Boolean)
+  if (!itemId) return
+  const baseMeta = baseParts.join(' · ')
+  if (baseMeta) patchItem(itemId, it => (it.kind === 'assistant' ? { ...it, meta: baseMeta } : it))
+  const ctx = await refreshCtx(usage).catch(() => null)
+  const parts = [...baseParts, ctx ? fmtCtx(ctx) : ''].filter(Boolean)
   const meta = parts.join(' · ')
-  patchItem(itemId, it => (it.kind === 'assistant' ? { ...it, meta } : it))
+  if (meta) patchItem(itemId, it => (it.kind === 'assistant' ? { ...it, meta } : it))
   // Persist under the turn's user message (durable row id) so reopening the chat shows it again.
   const a = getState().active
   if (!a) return
