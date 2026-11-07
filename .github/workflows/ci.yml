@@ -188,6 +188,7 @@ jobs:
       - run: tools/test_hermes_patches.sh
       - run: bash tools/test_hermes_debian.sh
       - run: bash tools/test_bootstrap_pin.sh
+      - run: bash tools/test_engine_rollback.sh
       - run: bash tools/test_bootstrap_image.sh
       - run: bash tools/test_say_hook.sh
       - run: bash tools/test_install_routes.sh
