@@ -336,20 +336,21 @@ module.exports = async t => {
     await pp.close()
   }
 
-  // A swipe left on the empty new-chat screen does what the canvas button does there: starts the chat, opens its canvas.
+  // A real finger on the empty new-chat screen does what the canvas button does there: starts the chat, opens its canvas.
   {
-    const pe = await browser.newPage({ viewport: { width: 375, height: 812 } })
+    const ectx = await browser.newContext({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true })
+    const pe = await ectx.newPage()
     await pe.goto(WEB + '/')
     await pe.locator('.empty .suggestion').first().waitFor({ timeout: 8000 })
-    await pe.evaluate(() => {
-      const el = document.querySelector('.empty')
-      const mk = (type, px) => new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === 'touchend' ? [] : [new Touch({ identifier: 1, target: el, clientX: px, clientY: 300 })] })
-      el.dispatchEvent(mk('touchstart', 300))
-      el.dispatchEvent(mk('touchmove', 200))
-      el.dispatchEvent(mk('touchmove', 80))
-      el.dispatchEvent(mk('touchend', 80))
-    })
+    await pe.locator('.model-chip').waitFor({ timeout: 8000 })
+    const cdp = await ectx.newCDPSession(pe)
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 300, y: 650, id: 1 }] })
+    for (let i = 1; i <= 12; i++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 300 - (220 * i) / 12, y: 650 + (i % 3), id: 1 }] })
+      await sleep(16)
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
     await pe.locator('.canvas-panel').waitFor({ timeout: 5000 }).then(() => check(true, 'swipe left on the empty new-chat screen opens a canvas'), () => check(false, 'swipe left on the empty new-chat screen opens a canvas'))
-    await pe.close()
+    await ectx.close()
   }
 }
