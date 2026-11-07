@@ -195,9 +195,10 @@ module.exports = async t => {
   const visibleCards = () => page.locator('.tool:visible', { hasText: /step [0-3]/ }).count()
   check((await visibleCards()) === 0, 'its cards are hidden')
   await run.click()
-  check((await visibleCards()) === 4, `tap shows all four (${await visibleCards()})`)
-  await run.click()
-  check((await visibleCards()) === 0, 'tap again folds them')
+  check((await page.locator('.tool-details-panel').count()) === 1, 'tap opens activity details')
+  check((await visibleCards()) === 4, `activity details shows all four (${await visibleCards()})`)
+  await page.getByRole('button', { name: 'Close activity details' }).click()
+  check((await visibleCards()) === 0, 'closing activity details keeps the run folded')
 
   // ── motion: tool card bodies slide open and closed; the phone's reduced-motion setting skips it ──
   await run.click()
@@ -226,13 +227,16 @@ module.exports = async t => {
   await page.getByPlaceholder('Message Hermes').fill('read the note')
   await page.locator('.composer').getByRole('button', { name: 'Send' }).click()
   await page.locator('.msg.assistant', { hasText: 'The note says: contract note. Nothing else to report.' }).waitFor({ timeout: 5000 })
-  const noteTool = page.locator('.tool', { hasText: 'read_file' }).last()
+  const noteRun = page.locator('.tool-run', { hasText: 'read_file' }).last()
+  await noteRun.click()
+  const noteTool = page.locator('.tool-details-panel .tool', { hasText: 'read_file' }).last()
   check((await noteTool.count()) === 1, 'real-shaped turn: the read_file call shows as a tool card')
   await noteTool.locator('.tool-head').click()
   await noteTool.locator('.tool-body').waitFor({ timeout: 3000 }).then(() => check(true, 'real-shaped turn: its body opens'), () => check(false, 'real-shaped turn: its body opens'))
   check((((await noteTool.locator('.tool-body').textContent()) || '').includes('contract note')), 'real-shaped turn: the card shows the JSON result')
   await noteTool.locator('.tool-head').click()
   await sleep(400)
+  await page.getByRole('button', { name: 'Close activity details' }).click()
 
   // ── a turn that wrote files ends with a card listing them; tap a file for its diff ──
   await page.getByPlaceholder('Message Hermes').fill('edit files')
