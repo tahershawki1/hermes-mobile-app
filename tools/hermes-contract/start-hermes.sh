@@ -20,7 +20,7 @@ mkdir -p "$work"
 # the two pins the same). A reused work dir fetches only when the pin moved.
 if [ ! -d "$src/.git" ]; then
   git init -q "$src"
-  git -C "$src" remote add origin https://github.com/NousResearch/hermes-agent.git
+  git -C "$src" remote add origin https://github.com/tahershawki1/hermes-agent.git
 fi
 if ! git -C "$src" cat-file -e "$pin^{commit}" 2>/dev/null; then
   git -C "$src" fetch -q --depth=1 origin "$(sed -n 's/^HERMES_COMMIT=\([0-9a-f]\{40\}\).*/\1/p' "$here/phone/bootstrap.sh")"

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Checks hermes/patches against Hermes: they must apply to the pinned build (web/vendor/hermes-shared/.hermes-commit,
 # the one the app is made for), and we report how they fare on upstream main (a heads-up for the next update).
-# Usage: tools/test_hermes_patches.sh [hermes-agent clone]   (clones NousResearch/hermes-agent if none is given)
+# Usage: tools/test_hermes_patches.sh [hermes-agent clone]   (clones the owner-controlled engine if none is given)
 set -euo pipefail
 here=$(cd "$(dirname "$0")/.." && pwd)
 pin=$(cat "$here/web/vendor/hermes-shared/.hermes-commit")
@@ -14,7 +14,7 @@ if [ -z "$src" ]; then
   full=$(sed -n 's/^HERMES_COMMIT=\([0-9a-f]\{40\}\).*/\1/p' "$here/phone/bootstrap.sh")
   src=$(mktemp -d)/hermes-agent
   git init -q "$src"
-  git -C "$src" remote add origin https://github.com/NousResearch/hermes-agent.git
+  git -C "$src" remote add origin https://github.com/tahershawki1/hermes-agent.git
   git -C "$src" fetch -q --depth=1 origin "$full"
   shallow=--depth=1
 fi

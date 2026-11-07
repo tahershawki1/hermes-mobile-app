@@ -7,6 +7,7 @@
 # and opens Android's installer. Safe to run again (it just refreshes everything).
 set -e
 REPO="https://github.com/tahershawki1/hermes-mobile-app"
+ENGINE_REPO="https://github.com/tahershawki1/hermes-agent.git"
 PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
 die() { echo "ERROR: $*" >&2; exit 1; }
 
@@ -70,8 +71,18 @@ find "$here/hermes-plugin/hermes-mobile" -name __pycache__ -prune -exec rm -rf {
   rm -rf "${p}plugins/hermes-mobile" && ln -s /root/.hermes/plugins/hermes-mobile "${p}plugins/hermes-mobile"; done' \
   || echo "    Could not add the plugin to every Hermes profile."
 
+# Existing installs may still have an upstream origin. Move them to the
+# owner-controlled full-history engine repository without touching the working tree.
+if "$DEB" --exists /root/.hermes/hermes-agent/.git; then
+  "$DEB" bash -lc "git -C /root/.hermes/hermes-agent remote set-url origin '$ENGINE_REPO'" \
+    || die "Could not switch Hermes engine origin to the independent repository"
+  echo "    Hermes engine origin: $ENGINE_REPO"
+fi
+
+# Legacy patch application remains only as a safe migration path for older
+# checkouts; new engine releases carry integrated fixes directly.
 # Our fixes to Hermes itself (hermes/README.md). One that no longer fits this Hermes is skipped, never half-applied.
-echo "    Applying the Hermes Mobile fixes to Hermes (hermes/patches)"
+echo "    Applying legacy Hermes Mobile fixes when needed (migration path)"
 "$DEB" --put "$here/hermes/patches" /root/.hermes/hermes-mobile-patches
 "$DEB" --put "$here/phone/hermes-patches.sh" /root/.hermes/scripts/hermes-patches.sh
 "$DEB" bash -lc 'bash /root/.hermes/scripts/hermes-patches.sh apply /root/.hermes/hermes-mobile-patches' \
