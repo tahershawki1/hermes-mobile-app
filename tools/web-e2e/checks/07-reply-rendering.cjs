@@ -220,8 +220,7 @@ module.exports = async t => {
   await noteRun.click()
   const noteTool = page.locator('.tool-details-panel .tool', { hasText: 'read_file' }).last()
   check((await noteTool.count()) === 1, 'real-shaped turn: the read_file call shows as a tool card')
-  await noteTool.locator('.tool-head').click()
-  await noteTool.locator('.tool-body').waitFor({ timeout: 3000 }).then(() => check(true, 'real-shaped turn: its body opens'), () => check(false, 'real-shaped turn: its body opens'))
+  await noteTool.locator('.tool-body').waitFor({ timeout: 3000 })
   check((((await noteTool.locator('.tool-body').textContent()) || '').includes('contract note')), 'real-shaped turn: the card shows the JSON result')
   await noteTool.locator('.tool-head').click()
   await sleep(400)
@@ -285,6 +284,7 @@ module.exports = async t => {
     if (await own.count()) await own.click()
     // Expand only when closed: toggling an already-open tool starts its close animation,
     // leaving a briefly visible link that detaches before a real click can land.
+    await page.locator('button.tool-run', { hasText: 'web_extract' }).last().waitFor({ state: 'visible', timeout: 10000 })
     const head = page.locator('.tool-head', { hasText: 'web_extract' }).last()
     if (!(await head.count())) {
       const run = page.locator('button.tool-run', { hasText: 'web_extract' }).last()
