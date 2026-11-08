@@ -79,14 +79,7 @@ if "$DEB" --exists /root/.hermes/hermes-agent/.git; then
   echo "    Hermes engine origin: $ENGINE_REPO"
 fi
 
-# Legacy patch application remains only as a safe migration path for older
-# checkouts; new engine releases carry integrated fixes directly.
-# Our fixes to Hermes itself (hermes/README.md). One that no longer fits this Hermes is skipped, never half-applied.
-echo "    Applying legacy Hermes Mobile fixes when needed (migration path)"
-"$DEB" --put "$here/hermes/patches" /root/.hermes/hermes-mobile-patches
-"$DEB" --put "$here/phone/hermes-patches.sh" /root/.hermes/scripts/hermes-patches.sh
-"$DEB" bash -lc 'bash /root/.hermes/scripts/hermes-patches.sh apply /root/.hermes/hermes-mobile-patches' \
-  || echo "    Some fixes did not fit this Hermes version and were skipped; Hermes runs unchanged there."
+echo "    Hermes Mobile engine fixes are integrated in the standalone engine build; no patches are applied."
 
 # Before the restart below: only a Hermes started after Termux got the files permission sees /sdcard.
 echo "    Giving Hermes access to the phone: files, Termux:API, Shizuku (no root needed)"

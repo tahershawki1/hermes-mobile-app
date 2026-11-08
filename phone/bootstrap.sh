@@ -165,8 +165,6 @@ image_restore() {
     return 1
   fi
   rm -f "$img"
-  # The image has the patches of its build; install.sh applies this installer's own set, so take the image's out first.
-  deb "bash /root/.hermes/scripts/hermes-patches.sh revert /root/.hermes/hermes-mobile-patches" >/dev/null 2>&1 || true
   say "image: using the ready-made Debian + Hermes (Debian and Hermes install steps skipped)"
 }
 # --- end of ready-made image -----------------------------------------------------------------------------------------

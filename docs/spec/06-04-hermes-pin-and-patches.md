@@ -1,4 +1,4 @@
-### 6.4 Hermes pin and patches (4)
+### 6.4 Standalone Hermes engine
 
 **The pin.** The Hermes that gets installed is one exact commit: `HERMES_COMMIT` (40 characters) at the top of `phone/bootstrap.sh`. It must equal the build the app is written against: `web/vendor/hermes-shared/.hermes-commit` (short SHA) and `.hermes-version`. `tools/test_bootstrap_pin.sh` (run by CI) fails when they differ or when the Hermes installer is not called with `--commit $HERMES_COMMIT`. `bootstrap.sh` also uses the pinned commit's own `scripts/install.sh`, not the hosted one, so installs are reproducible.
 

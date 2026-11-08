@@ -3,11 +3,11 @@
 | Script | Runs in | Run by | What it does |
 |---|---|---|---|
 | `bootstrap.sh` | Termux | the user, the app (pasted command), the computer scripts | The whole phone-side install, no questions (steps below). Also `bash hm.sh model <provider> <model> [ENV_NAME=key]` to set a model. |
-| `install.sh` | Termux | `bootstrap.sh`, or by hand to repair/refresh | Plugin, supervisor scripts, patches, phone access, enabling the plugin; downloads the APK unless `HM_NO_APK` is set. |
+| `install.sh` | Termux | `bootstrap.sh`, or by hand to repair/refresh | Plugin, supervisor scripts, integrated standalone engine, phone access, enabling the plugin; downloads the APK unless `HM_NO_APK` is set. |
 | `phone-access.sh` | Termux | `bootstrap.sh` (early) and `install.sh` | Hermes's access to the phone: files, Termux:API links, Shizuku `rish`. |
 | `hermes-services` | Termux | Termux:Boot, the app (`startHermes`), the installer, by hand | The supervisor (6.2). Idempotent. |
 | `hermes-debian` | Termux | `hermes-services`, installers, the app | One front for "run something in Debian" that hides proot vs chroot. |
-| `hermes-patches.sh` | Debian | `install.sh`, `bootstrap.sh`, `tools/build-image.sh` | Applies, checks or reverts `hermes/patches` (6.4). |
+| `hermes-patches.sh` | Debian | Legacy compatibility only | Applies or reverts patches for old installations; new standalone engine installs do not use it. |
 | `hm-shizuku` | Termux | the app (pair, from the code the user typed; start) | Lets Shizuku start again by itself without root. |
 | `cron_ticker.py` | Debian | `hermes-services` loop `cron-ticker` | Runs Hermes's cron scheduler and tells the app when to wake the phone. |
 | `hermes_memory_sync.py` | Debian | `hermes-services` loop `memory-sync` (only if the file exists) | Two-device memory sync through a private git repo. |

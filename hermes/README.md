@@ -1,44 +1,9 @@
-# Fixes to Hermes itself
+## Standalone Hermes engine
 
-Hermes Mobile runs an unmodified [Hermes Agent](https://github.com/NousResearch/hermes-agent) build, plus the small
-fixes in `patches/`. Each one is a plain `git format-patch` file, applied on top of the Hermes build the app is made for
-(`web/vendor/hermes-shared/.hermes-commit`) and offered upstream, so the list shrinks as Hermes merges them.
+`engine/` is the self-contained Hermes source used by Hermes Mobile. It is based on the pinned upstream commit in
+`compatibility/hermes-engine.json`, with the former mobile fixes merged directly into the source. Runtime installation
+does not clone an upstream checkout and does not apply patches.
 
-| Patch | What it fixes | Upstream |
-|---|---|---|
-| `0001-fix-agent-keep-marker-merged-user-rows-addressable` | A message merged into a model-switch marker could not be edited or retried ("target user message is no longer in session history") | NousResearch/hermes-agent@696f6e9, already on Hermes main: a backport for the pinned build |
-| `0002-fix-tui_gateway-keep-the-prompt-a-model-switch-marker-absorbed` | The message sent right after a model switch (or the first message, when the model was picked before it) disappeared from the model's history at the next switch, while the chat still showed it | Offered upstream (Refs NousResearch/hermes-agent#131382) |
-| `0003-perf-yaml-reuse-a-per-thread-reader-in-safe_load` | Every YAML read built a new parser (~7 ms each on a phone), so a skill scan took ~1.8 s while holding up the chat's other requests at start-up; now ~0.5 s | To be offered upstream (branch `perf/yaml-reuse-parser`) |
-| `0004-fix-title-back-off-quietly-when-the-title-model-s-provider-is-busy` | A rate-limited title model ("Auxiliary title generation failed: HTTP 429") warned in every new chat and got one more request per chat; now it is logged only, title requests back off (60 s doubling to 30 min) and the chat keeps its instant title until a later turn names it | To be offered upstream |
-| `0005-feat-terminal-stream-foreground-command-output` | Local foreground terminal calls stream redacted output chunks to the owning gateway session while preserving bounded capture; identical concurrent commands suppress streaming rather than mix output | To be offered upstream |
-| `parallel-tools.patch` | Adds the per-profile `agent.max_parallel_tools` setting and raises the safe concurrent worker ceiling to 10; unsafe tools and overlapping file mutations remain serialized | To be offered upstream |
-
-## On the phone
-
-`phone/install.sh` copies the patches into Debian and runs `phone/hermes-patches.sh apply`. The changes sit in the Hermes
-checkout as ordinary uncommitted edits, so you can always see and undo them (inside Debian):
-
-```bash
-bash ~/.hermes/scripts/hermes-patches.sh status ~/.hermes/hermes-mobile-patches   # applied / pending / upstream / conflict
-bash ~/.hermes/scripts/hermes-patches.sh revert ~/.hermes/hermes-mobile-patches   # back to upstream's files
-git -C ~/.hermes/hermes-agent diff                                               # exactly what changed
-```
-
-`install.sh` restarts a running Hermes so the change loads; after a manual `apply`/`revert`, re-run it or reboot the
-phone. `apply` is all or nothing: a
-patch that no longer fits the installed Hermes stops it with nothing changed. A patch whose upstream commit Hermes already
-contains reads as `upstream` and is skipped. `hermes update` stashes the edits and puts them back after the update.
-
-## Changing the list
-
-- **New fix:** make the commit in a `hermes-agent` clone checked out at the pinned build, with a test that fails without
-  it, then `git format-patch -1 --no-signature -o hermes/patches` and number it after the last one. Open the same fix
-  as a PR upstream (rebased onto their `main`) and link it in the table.
-- **Moving to a newer Hermes** (together with `web/vendor/hermes-shared`): also set `HERMES_COMMIT` in `phone/bootstrap.sh` to the new
-  full SHA, the same as `.hermes-commit`/`.hermes-version` (new installs get exactly that build; CI's `tools/test_bootstrap_pin.sh`
-  enforces it); delete the patches that read `upstream`,
-  re-make any that read `conflict` on the new build, and update the table.
-- `tools/test_hermes_patches.sh` (also run by CI) checks that every patch applies to the pinned build and reverts cleanly,
-  and shows how each one fares on upstream `main`.
-- Checking 0002 by hand: `tools/hermes_repro_model_switch.py` reproduces the lost message on a Hermes checkout with a fake
-  model (no key needed); `tools/probe_model_switch.py` runs the same story against the phone's real Hermes and models.
+The phone installer restarts Hermes after installation so the integrated engine changes load. Keep `engine/` and
+`compatibility/hermes-engine.json` synchronized when updating the engine. Run the engine tests and mobile contract tests
+before committing an update.

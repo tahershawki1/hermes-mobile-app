@@ -15,18 +15,10 @@ work=$1 port=$2
 pin=$(cat "$here/web/vendor/hermes-shared/.hermes-commit")
 src=$work/hermes-agent
 mkdir -p "$work"
-# Only the pinned commit, without history: a blob-less clone fetched each file the patch checks read one at a time
-# (about 40 s in CI). Fetching by id takes the full id, which phone/bootstrap.sh has (tools/test_bootstrap_pin.sh keeps
-# the two pins the same). A reused work dir fetches only when the pin moved.
-if [ ! -d "$src/.git" ]; then
-  git init -q "$src"
-  git -C "$src" remote add origin https://github.com/tahershawki1/hermes-agent.git
-fi
-if ! git -C "$src" cat-file -e "$pin^{commit}" 2>/dev/null; then
-  git -C "$src" fetch -q --depth=1 origin "$(sed -n 's/^HERMES_COMMIT=\([0-9a-f]\{40\}\).*/\1/p' "$here/phone/bootstrap.sh")"
-fi
-git -C "$src" -c advice.detachedHead=false checkout -q "$pin"
-HERMES_AGENT_DIR="$src" bash "$here/phone/hermes-patches.sh" apply "$here/hermes/patches"
+# The contract tests exercise the standalone engine shipped with this app. Former mobile fixes are already merged into
+# that source, so no upstream clone or runtime patch application is needed.
+mkdir -p "$src"
+tar --exclude=.git -cf - -C "$here/hermes/engine" . | tar -xf - -C "$src"
 # The pinned lock file, the dashboard's web extra only (fastapi, uvicorn); Python as the pin asks (3.14).
 (cd "$src" && uv sync -q --frozen --extra web --python 3.14)
 # Keep uv's caches and Pythons where they are when HOME changes below.
