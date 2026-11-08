@@ -1,4 +1,4 @@
-### 6.4 Hermes pin and patches (3)
+### 6.4 Hermes pin and patches (4)
 
 **The pin.** The Hermes that gets installed is one exact commit: `HERMES_COMMIT` (40 characters) at the top of `phone/bootstrap.sh`. It must equal the build the app is written against: `web/vendor/hermes-shared/.hermes-commit` (short SHA) and `.hermes-version`. `tools/test_bootstrap_pin.sh` (run by CI) fails when they differ or when the Hermes installer is not called with `--commit $HERMES_COMMIT`. `bootstrap.sh` also uses the pinned commit's own `scripts/install.sh`, not the hosted one, so installs are reproducible.
 
@@ -11,6 +11,7 @@
 | `0003-perf-yaml-reuse-a-per-thread-reader-in-safe_load.patch` | Every YAML read built a new parser (about 7 ms on a phone), so a skill scan took about 1.8 s and held up other requests at start-up; now one reader per thread and mode. | To be offered upstream. |
 | `0004-fix-title-back-off-quietly-when-the-title-model-s-provider-is-busy.patch` | A rate-limited chat title (HTTP 429, also overload, timeout, connection trouble, 5xx) showed "⚠ Auxiliary title generation failed: …" in every new chat, and each new chat sent another request to the provider that had refused it. Such failures now stay in Hermes's log and open one shared backoff (60 s, doubling to 30 min, or a longer `Retry-After`; requests that fail while it is already open do not double it again) during which no title request is sent; the chat keeps its instant title and is named on a later turn once the backoff ends (at most 6 failed requests per chat; a late retry titles the chat from that turn's message, as turns 2-3 already did). `hermes sessions` re-titling stops asking for the rest of the backoff too. Billing and other errors are still reported. | To be offered upstream. |
 | `0005-feat-terminal-stream-foreground-command-output.patch` | The pinned Hermes streams redacted output chunks from local foreground terminal calls, correlated to their tool call, without changing command execution. Duplicate identical commands running concurrently suppress streaming instead of sharing chunks. | To be offered upstream. |
+| `parallel-tools.patch` | Adds `agent.max_parallel_tools` (1–10, default 10) and uses it to cap concurrent independent tool workers. The planner still serializes unsafe tools and overlapping file mutations. | To be offered upstream. |
 
 **Workflow.**
 

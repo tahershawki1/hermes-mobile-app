@@ -61,6 +61,7 @@ export const HERMES_SETTINGS: HGroup[] = [
     title: 'Replies',
     items: [
       { key: 'agent.max_turns', label: 'Most steps per reply', help: 'The most model calls and tool uses for one message before Hermes stops.', kind: 'number', min: 1, max: 5000, nullLabel: 'No limit' },
+      { key: 'agent.max_parallel_tools', label: 'Parallel tools', help: 'Maximum number of independent tools Hermes runs at the same time. Higher values use more RAM and processing power.', kind: 'number', min: 1, max: 10 },
       { key: 'agent.run_budget_seconds', label: 'Time budget per reply', help: 'Hermes wraps up a reply that has run this long, with a warning at 80 %.', kind: 'number', min: 30, max: 86400, unit: s, nullLabel: 'Off' },
       { key: 'agent.text_verbosity', label: 'Answer length (OpenAI)', help: 'How long final answers are on OpenAI’s newer models. Other models ignore it.', kind: 'choice', options: [{ value: '', label: 'Provider default' }, { value: 'low', label: 'Short' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'Long' }] },
       { key: 'agent.image_input_mode', label: 'Pictures you send', help: 'Attach them to the model, or describe them in words first for models that can’t see.', kind: 'choice', options: [{ value: 'auto', label: 'Automatic' }, { value: 'native', label: 'Always attach' }, { value: 'text', label: 'Always describe' }] },

@@ -6,11 +6,11 @@ The chat view draws `store.active.items`, an array of `ChatItem` (`web/src/store
 |---|---|---|
 | `user` | A sent prompt, or a stored user row. | Right-aligned bubble (below). |
 | `assistant` | Streamed `message.delta` / `reasoning.delta`, or a stored assistant row. | Reasoning block, Markdown reply, actions (below). |
-| `tool` | `tool.generating`, `tool.start`, `tool.complete`, or a stored tool row. | Tool card (below). |
+| `tool` | `tool.generating`, `tool.start`, `tool.complete`, or a stored tool row. | A compact folded activity line in the conversation; its full arguments, output and diffs open in the Activity details panel. |
 | `subagent` | `subagent.*` events. | Sub-agent card (below). |
 | `notice` | Stored system rows; steer, slash, review, background and compress results; send failures; model errors. | Coloured box with Markdown text. |
 
-There is no separate item kind for approvals, images, files or errors. Approvals are a sheet (3.6). Images and files are parts of user messages (and of Markdown in replies). Errors are `notice` items with level `error`, or a tool card in the error state. Cards written by Hermes in a reply are Markdown code fences (3.9).
+There is no separate item kind for approvals, images, files or errors. Approvals are a sheet (3.6). Images and files are parts of user messages (and of Markdown in replies). Errors are `notice` items with level `error`, or a tool card in the error state. Cards written by Hermes in a reply are Markdown code fences (3.9). `status.update` events add deduplicated progress notices to the conversation, so meaningful milestones are visible without exposing raw tool payloads.
 
 #### User message
 

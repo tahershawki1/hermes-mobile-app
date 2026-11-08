@@ -59,6 +59,7 @@
   "stall_guards": true,
   "task_completion_guidance": true,
   "parallel_tool_call_guidance": true,
+  "max_parallel_tools": 10,
   "environment_probe": true,
   "bot_mode_protocol": true,
   "environment_hint": "",

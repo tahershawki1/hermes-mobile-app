@@ -187,6 +187,8 @@ export const TerminalTranscript = memo(function TerminalTranscript({ items }: { 
 
 /** The line a folded run of tool calls shows: icons of the tools used, "Ran 7 tools · 42s", a chevron. */
 export const ToolRunHead = memo(function ToolRunHead({ id, run, open, onToggle, onOpen }: { id: string; run: ToolRun; open: boolean; onToggle: (id: string) => void; onOpen?: () => void }) {
+  const uniqueNames = [...new Set(run.names)]
+  const humanNames = uniqueNames.map(name => name.replaceAll('_', ' ')).join(', ')
   return (
     <button className={`tool-run${run.running ? ' running' : ''}`} aria-expanded={open} onClick={() => { haptic(); onOpen ? onOpen() : onToggle(id) }}>
       <span className="tool-run-icons" aria-hidden="true">
@@ -195,9 +197,9 @@ export const ToolRunHead = memo(function ToolRunHead({ id, run, open, onToggle, 
         ))}
       </span>
       <span className="tool-run-label">
-        {runLabel(run)}
+        {run.running ? `Working on ${humanNames || 'your request'}` : `${runLabel(run)} completed`}
         {run.errors ? <span className="tool-run-err"> · {run.errors} failed</span> : null}
-        <span className="tool-run-names">{run.names.join(', ')}</span>
+        <span className="tool-run-names">{run.names.length} task{run.names.length === 1 ? '' : 's'} · tap for details</span>
       </span>
       {run.running ? <Spinner small /> : null}
       <span className="chev" aria-hidden="true"><Chevron open={open} /></span>

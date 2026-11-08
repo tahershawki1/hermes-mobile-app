@@ -1424,7 +1424,21 @@ client.onEvent((ev: GatewayEvent) => {
       updateActive(() => ({ status: String(payload.text || '') }))
       break
     case 'status.update':
-      if (!quietStatus(String(payload.text || ''))) updateActive(() => ({ status: String(payload.text || '') }))
+      {
+        const text = String(payload.text || '').trim()
+        if (!quietStatus(text)) {
+          updateActive(() => ({ status: text }))
+          // Keep a compact, readable progress trail in the conversation. Full tool
+          // arguments/output stay behind the activity panel instead of becoming cards.
+          if (text) {
+            const current = getState().active?.items || []
+            const last = [...current].reverse().find(i => i.kind === 'notice' && i.id.startsWith('progress-'))
+            if (!last || last.kind !== 'notice' || last.text !== text) {
+              pushItem({ kind: 'notice', id: `progress-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text, level: 'info' })
+            }
+          }
+        }
+      }
       break
     case 'reasoning.delta':
       queueDelta('reasoning', String(payload.text || ''))
