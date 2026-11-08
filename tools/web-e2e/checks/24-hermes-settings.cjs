@@ -13,6 +13,8 @@ module.exports = async t => {
   await pg.locator('.set-row', { hasText: 'Retries before a fallback' }).waitFor({ timeout: 5000 })
   const groups = await pg.locator('.set-heading').allInnerTexts()
   check(['Memory', 'Long chats', 'Sub-agents', 'Safety and privacy'].every(g => groups.some(x => x.toLowerCase() === g.toLowerCase())), `hermes settings: grouped by section (${groups.join(' | ')})`)
+  const parallel = pg.locator('.set-row', { hasText: 'Parallel tools' })
+  check((await parallel.count()) === 1 && (await parallel.innerText()).includes('10'), 'hermes settings: Parallel tools shows the default worker limit')
   const puts = () => calls().filter(c => c.path === '/api/config' && c.http === 'PUT')
 
   // A number: refused outside its range, saved inside it, nested under its path; the row shows it and "Changed".

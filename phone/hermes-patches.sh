@@ -6,8 +6,17 @@
 # stops `apply` with nothing changed. Restart the Hermes dashboard afterwards so the change is loaded.
 set -euo pipefail
 cmd=${1:-status}
-dir=$(cd "${2:-$(dirname "$0")/../hermes/patches}" && pwd)
+dir_arg=${2:-$(dirname "$0")/../hermes/patches}
 cd "${HERMES_AGENT_DIR:-$HOME/.hermes/hermes-agent}"
+
+# New owner builds vendor the engine in hermes/engine and no longer carry a
+# legacy patch directory. Keep this command a successful no-op for those builds;
+# older installs still use the explicit patch directory below.
+if [ ! -d "$dir_arg" ]; then
+  echo "no legacy patches (vendored Hermes engine)"
+  exit 0
+fi
+dir=$(cd "$dir_arg" && pwd)
 
 state() {
   # A patch taken from an upstream commit (its "From <sha>" line) is in once Hermes contains that commit.

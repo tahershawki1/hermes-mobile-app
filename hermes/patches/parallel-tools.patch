@@ -1,0 +1,51 @@
+diff --git a/agent/tool_executor.py b/agent/tool_executor.py
+index 4090595..c9627d1 100644
+--- a/agent/tool_executor.py
++++ b/agent/tool_executor.py
+@@ -126,7 +126,7 @@ def _budget_for_agent(agent) -> BudgetConfig:
+     except Exception:
+         return DEFAULT_BUDGET
+ 
+-_MAX_TOOL_WORKERS = 8  # concurrent worker threads per batch
++_MAX_TOOL_WORKERS = 10  # hard upper bound; agent.max_parallel_tools may lower this per profile
+ _DEFAULT_IMAGE_PARALLEL_REQUESTS = 4
+ # Generous: slow-but-valid tool work must never be preempted by the batch guard.
+ _DEFAULT_CONCURRENT_TOOL_TIMEOUT_S = 420.0
+@@ -237,10 +237,21 @@ def _image_generate_parallel_limit() -> int:
+ 
+ 
+ def _max_workers_for_tool_batch(runnable_calls) -> int:
+-    """Return the worker cap for a concurrent tool batch."""
++    """Return the configured worker cap for a concurrent tool batch.
++
++    The profile setting is deliberately clamped to 1..10: it controls the number
++    of independent tool workers, while the planner still serializes unsafe tools
++    and overlapping file mutations.
++    """
+     if not runnable_calls:
+         return 0
+-    max_workers = _MAX_TOOL_WORKERS
++    try:
++        from hermes_cli.config import load_config
++        cfg = load_config() or {}
++        configured = (cfg.get("agent", {}) or {}).get("max_parallel_tools", 10)
++        max_workers = max(1, min(int(configured), _MAX_TOOL_WORKERS))
++    except (AttributeError, TypeError, ValueError, ImportError):
++        max_workers = _MAX_TOOL_WORKERS
+     if any((call[2] if len(call) >= 3 else None) == "image_generate" for call in runnable_calls):
+         max_workers = min(max_workers, _image_generate_parallel_limit())
+     return min(len(runnable_calls), max_workers)
+diff --git a/hermes_cli/config_defaults.py b/hermes_cli/config_defaults.py
+index db159a5..13099f0 100644
+--- a/hermes_cli/config_defaults.py
++++ b/hermes_cli/config_defaults.py
+@@ -188,6 +188,9 @@ DEFAULT_CONFIG = {
+         # read-only commands) into one batched turn; the runtime already runs them concurrently. ~70
+         # cached tokens. False disables.
+         "parallel_tool_call_guidance": True,
++        # Maximum independent tools executed concurrently in one model batch.
++        # The runtime clamps this to 1..10; unsafe and overlapping mutations remain sequential.
++        "max_parallel_tools": 10,
+         # Toolchain probe: surfaces Python/pip/uv/PEP-668 state in the system prompt only when
+         # something non-default is detected (no pip module, pip/python mismatch, PEP 668 without
+         # uv); zero tokens when clean. Skipped for docker/modal/ssh backends (own probe).

@@ -85,8 +85,8 @@ img_url="$base/hermes-image-${pin:0:12}/$name"
 go used
 check used "image downloaded from the pin's release, restored, no normal install" \
   "grep -qx '$img_url.sha256' calls/curl && grep -qx '$img_url' calls/curl && grep -q '^restore ' calls/proot-distro && [ ! -e $C/normal-install ]"
-check used "log says the image was used; image's patches reverted for install.sh; download removed" \
-  "grep -q 'image: using the ready-made Debian' calls/say && grep -q 'hermes-patches.sh revert' calls/deb && [ ! -e home/hm-debian-image.tar.zst ]"
+check used "log says the image was used and the download was removed" \
+  "grep -q 'image: using the ready-made Debian' calls/say && [ ! -e home/hm-debian-image.tar.zst ]"
 
 go missing PRE='rm -rf "$SERVE"/*'
 check missing "no image for this pin (404) -> normal install, image itself never fetched" \

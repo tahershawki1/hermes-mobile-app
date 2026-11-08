@@ -15,8 +15,9 @@ work=$1 port=$2
 pin=$(cat "$here/web/vendor/hermes-shared/.hermes-commit")
 src=$work/hermes-agent
 mkdir -p "$work"
-# The contract tests exercise the standalone engine shipped with this app. Former mobile fixes are already merged into
-# that source, so no upstream clone or runtime patch application is needed.
+# The contract tests exercise the standalone engine shipped with this app. The source is the owner-controlled Hermes
+# engine mirrored from https://github.com/tahershawki1/hermes-agent; former mobile fixes are already merged into it,
+# so no upstream clone or runtime patch application is needed here.
 mkdir -p "$src"
 tar --exclude=.git -cf - -C "$here/hermes/engine" . | tar -xf - -C "$src"
 # The pinned lock file, the dashboard's web extra only (fastapi, uvicorn); Python as the pin asks (3.14).
