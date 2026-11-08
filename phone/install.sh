@@ -79,7 +79,16 @@ if "$DEB" --exists /root/.hermes/hermes-agent/.git; then
   echo "    Hermes engine origin: $ENGINE_REPO"
 fi
 
-echo "    Hermes Mobile engine fixes are integrated in the standalone engine build; no patches are applied."
+# Compatibility patches keep existing engine checkouts aligned with the vendored build until the
+# corresponding fixes land in the owner engine repository. New images apply the same files while building.
+if [ -d "$here/hermes/patches" ]; then
+  "$DEB" --put "$here/hermes/patches" /root/.hermes/hermes-mobile-patches
+  "$DEB" --put "$here/phone/hermes-patches.sh" /root/.hermes/scripts/hermes-patches.sh
+  "$DEB" chmod 755 /root/.hermes/scripts/hermes-patches.sh
+  "$DEB" bash /root/.hermes/scripts/hermes-patches.sh apply /root/.hermes/hermes-mobile-patches \
+    || die "Could not apply the Hermes Mobile compatibility patches"
+  echo "    Hermes Mobile compatibility patches applied"
+fi
 
 # Before the restart below: only a Hermes started after Termux got the files permission sees /sdcard.
 echo "    Giving Hermes access to the phone: files, Termux:API, Shizuku (no root needed)"
