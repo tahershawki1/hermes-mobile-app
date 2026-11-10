@@ -439,6 +439,8 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
   const previewing = useStore(s => Boolean(s.opening && s.preview?.storedId === s.opening))
   const items = useStore(s => (s.opening && s.preview?.storedId === s.opening ? s.preview.items : s.active?.items ?? null))
   const running = useStore(s => s.active?.running ?? false)
+  const activeStatus = useStore(s => s.active?.status ?? '')
+  const activeTurnStart = useStore(s => s.active?.turnStart ?? null)
   const sessionKey = useStore(s => (s.opening && s.preview?.storedId === s.opening ? s.opening : s.active?.storedId))
   const scroller = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
@@ -802,7 +804,7 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
         <span>Release for a side question</span>
       </div>
     </div>
-    {toolPanel && panelItems.length > 0 && <ToolDetailsPanel items={panelItems} onClose={() => setToolPanel(null)} />}
+    {toolPanel && panelItems.length > 0 && <ToolDetailsPanel items={panelItems} running={running} status={activeStatus} turnStart={activeTurnStart} onClose={() => setToolPanel(null)} />}
     {railShown && (
       <Scrubber marks={marks} current={Math.min(curMark, marks.length - 1)} rail={rail} pos={railPos} onPick={k => marks[k] && setScrubTo(marks[k].idx)} />
     )}
@@ -810,9 +812,13 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
   )
 }
 
-function ToolDetailsPanel({ items, onClose }: { items: Extract<ChatItem, { kind: 'tool' }>[]; onClose: () => void }) {
+function ToolDetailsPanel({ items, running, status, turnStart, onClose }: { items: Extract<ChatItem, { kind: 'tool' }>[]; running: boolean; status: string; turnStart: number | null; onClose: () => void }) {
   useBackHandler(onClose)
   const terminal = items.length > 0 && items.every(item => item.name === 'terminal')
+  const groupRunning = running && items.some(item => item.status === 'running' || item.status === 'generating')
+  const elapsed = useElapsed(turnStart, groupRunning)
+  const completed = items.filter(item => item.status === 'done').length
+  const failed = items.filter(item => item.status === 'error').length
   return (
     <aside className="tool-details-panel" role="dialog" aria-label="Activity details">
       <header className="tool-details-head">
@@ -822,6 +828,13 @@ function ToolDetailsPanel({ items, onClose }: { items: Extract<ChatItem, { kind:
         </div>
         <button className="icon-btn" aria-label="Close activity details" onClick={onClose}>✕</button>
       </header>
+      <div className={`execution-summary${groupRunning ? ' live' : ''}`} role="status">
+        <span className="execution-summary-icon">{groupRunning ? <Spinner small /> : failed ? '✕' : '✓'}</span>
+        <span className="execution-summary-copy">
+          <strong>{groupRunning ? status || 'Working on your request…' : failed ? 'Completed with errors' : 'Tool activity'}</strong>
+          <span>{completed}/{items.length} tools completed{failed ? ` · ${failed} failed` : ''}{elapsed > 0 ? ` · ${fmtClock(elapsed / 1000)}` : ''}</span>
+        </span>
+      </div>
       <div className="tool-details-body">
         {terminal ? <TerminalTranscript items={items} /> : items.map(item => <ToolCard key={item.id} item={item} detailsOnly />)}
       </div>

@@ -6,4 +6,4 @@ Clicking a placeholder opens the `ToolDetailsPanel`, a separate edge panel conta
 
 `ToolCard` supports compact placeholders in the chat and expanded details in the activity panel. `ToolRunHead` represents a consecutive tool run as one placeholder. The chat no longer renders `TerminalTranscript` inline.
 
-The panel uses `aria-label="Activity details"` for the dialog and `aria-label="Close activity details"` for its close button.
+The panel uses `aria-label="Activity details"` for the dialog and `aria-label="Close activity details"` for its close button. Its live summary shows the current status, completed/total tool count, failures and elapsed turn time, so the panel remains useful while Hermes is working rather than only after a tool finishes.
