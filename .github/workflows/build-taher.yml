@@ -3,6 +3,12 @@ name: Build Hermes Taher APK
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Publish a GitHub Release after the APK build
+        required: true
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -86,6 +92,7 @@ jobs:
           retention-days: 14
 
       - name: Publish verified APK to GitHub Releases
+        if: github.event_name == 'push' || inputs.publish_release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
