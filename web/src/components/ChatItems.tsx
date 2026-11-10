@@ -11,7 +11,7 @@ import { api } from '../api'
 import { Lightbox, Media } from './Media'
 import { DiffView, looksLikeDiff } from './Diff'
 import { fmtDuration, formatOutput, memoryDiff, phoneAppLabel, plainText } from '../text'
-import { runLabel, type ToolRun } from '../fold'
+import { runLabel, runSummary, type ToolRun } from '../fold'
 import { Spinner } from './Spinner'
 import { HermesPresence } from './HermesPresence'
 import { Linked } from './Linked'
@@ -197,9 +197,9 @@ export const ToolRunHead = memo(function ToolRunHead({ id, run, open, onToggle, 
         ))}
       </span>
       <span className="tool-run-label">
-        {run.running ? `Working on ${humanNames || 'your request'}` : `${runLabel(run)} completed`}
+        {runSummary(run) || `Working on ${humanNames || 'your request'}`}
         {run.errors ? <span className="tool-run-err"> · {run.errors} failed</span> : null}
-        <span className="tool-run-names">{run.names.length} task{run.names.length === 1 ? '' : 's'} · tap for details</span>
+        <span className="tool-run-names">{run.running ? 'Working now' : runLabel(run)} · tap for details</span>
       </span>
       {run.running ? <Spinner small /> : null}
       <span className="chev" aria-hidden="true"><Chevron open={open} /></span>

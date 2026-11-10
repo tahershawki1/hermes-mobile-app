@@ -155,7 +155,7 @@ describe('memoryDiff', () => {
   })
 })
 
-import { foldMap, runLabel, toolRuns } from './fold'
+import { foldMap, runLabel, runSummary, toolRuns } from './fold'
 import type { ChatItem } from './store'
 
 describe('tool runs', () => {
@@ -172,6 +172,15 @@ describe('tool runs', () => {
     expect(runs[1]).toMatchObject({ start: 4, end: 5, tools: 1, secs: 2, names: ['terminal'] })
     expect(toolRuns([user, tool('t1'), tool('t2'), say('a')])).toHaveLength(1)
     expect(runLabel(runs[0])).toBe('Ran 1 tool · 2s')
+  })
+
+  test('summarizes tool work in user-facing language and counts repeated calls', () => {
+    const items: ChatItem[] = [
+      { kind: 'tool', id: 'r1', name: 'read_file', status: 'done' },
+      { kind: 'tool', id: 'r2', name: 'read_file', status: 'done' },
+      { kind: 'tool', id: 'r3', name: 'read_file', status: 'done' }
+    ]
+    expect(runSummary(toolRuns(items)[0])).toBe('Read 3 files')
   })
 
   test('hides all but the header when closed, nothing when open', () => {

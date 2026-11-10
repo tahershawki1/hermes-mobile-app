@@ -1,0 +1,1 @@
+- **Clearer live tool summaries.** Folded Hermes activity now describes what happened in user-facing language (for example, `Read 3 files · Ran 5 commands`) while keeping raw arguments and output in the Activity details panel. The panel also shows the live phase, completed-tool count, failures and elapsed time.

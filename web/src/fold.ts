@@ -12,6 +12,8 @@ export interface ToolRun {
   running: boolean
   /** Distinct tool names, in order of first use. */
   names: string[]
+  /** Number of calls for each tool, kept in first-use order by `names`. */
+  counts: Record<string, number>
 }
 
 /** Fewer calls than this stay as plain cards. */
@@ -43,6 +45,8 @@ export function toolRuns(items: ChatItem[]): ToolRun[] {
     const end = last + 1 // a reasoning-only reply after the last call belongs to the next text, not the run
     const tools = items.slice(i, end).filter((x): x is Extract<ChatItem, { kind: 'tool' }> => x.kind === 'tool')
     if (tools.length >= FOLD_MIN || tools.length > 0 && tools.every(t => t.name === 'terminal')) {
+      const counts: Record<string, number> = {}
+      for (const tool of tools) counts[tool.name] = (counts[tool.name] || 0) + 1
       runs.push({
         start: i,
         end,
@@ -50,7 +54,8 @@ export function toolRuns(items: ChatItem[]): ToolRun[] {
         secs: tools.reduce((s, t) => s + (t.duration || 0), 0),
         errors: tools.filter(t => t.status === 'error').length,
         running: tools.some(t => t.status === 'running' || t.status === 'generating'),
-        names: [...new Set(tools.map(t => t.name))]
+        names: [...new Set(tools.map(t => t.name))],
+        counts
       })
     }
     i = end
@@ -83,4 +88,26 @@ export function runLabel(r: ToolRun): string {
   if (r.running) return `Running ${n}…`
   const t = r.secs >= 60 ? `${Math.floor(r.secs / 60)}m ${Math.round(r.secs % 60)}s` : r.secs >= 1 ? `${Math.round(r.secs)}s` : ''
   return `Ran ${n}${t ? ` · ${t}` : ''}`
+}
+
+const ACTIONS: Record<string, { one: string; many: string; verb: string }> = {
+  terminal: { one: 'command', many: 'commands', verb: 'Ran' },
+  execute_code: { one: 'code block', many: 'code blocks', verb: 'Ran' },
+  read_file: { one: 'file', many: 'files', verb: 'Read' },
+  search_files: { one: 'search', many: 'searches', verb: 'Searched' },
+  write_file: { one: 'file', many: 'files', verb: 'Updated' },
+  patch: { one: 'file', many: 'files', verb: 'Edited' },
+  web_search: { one: 'web search', many: 'web searches', verb: 'Ran' },
+  web_extract: { one: 'page', many: 'pages', verb: 'Read' },
+  delegate_task: { one: 'subtask', many: 'subtasks', verb: 'Delegated' }
+}
+
+/** A useful summary for the compact activity line; raw tool names stay in the details panel. */
+export function runSummary(r: ToolRun): string {
+  return r.names.map(name => {
+    const count = r.counts[name] || 0
+    const action = ACTIONS[name]
+    if (!action) return `${name.replaceAll('_', ' ')} ×${count}`
+    return `${action.verb} ${count} ${count === 1 ? action.one : action.many}`
+  }).join(' · ')
 }
