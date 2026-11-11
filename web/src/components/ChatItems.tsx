@@ -51,6 +51,19 @@ function argsPreview(args?: Record<string, unknown> | null): string {
   return typeof first === 'string' ? first : ''
 }
 
+const TOOL_ACTIONS: Record<string, string> = {
+  terminal: 'Ran', execute_code: 'Ran code in', read_file: 'Read', write_file: 'Wrote', patch: 'Edited',
+  search_files: 'Searched', web_search: 'Searched the web for', web_extract: 'Read webpage',
+  browser_navigate: 'Opened', delegate_task: 'Delegated', skill_view: 'Opened skill',
+  skills_list: 'Listed skills', memory: 'Updated memory', todo: 'Updated tasks', phone_app: 'Used'
+}
+
+function toolActivityLabel(item: Extract<ChatItem, { kind: 'tool' }>): string {
+  const subject = item.context || (item.name === 'phone_app' ? phoneAppLabel(item.args) : '') || argsPreview(item.args)
+  const action = TOOL_ACTIONS[item.name] || `Used ${item.name.replaceAll('_', ' ')}`
+  return subject ? `${action} ${subject}` : action
+}
+
 export const ToolCard = memo(function ToolCard({ item, compact = false, detailsOnly = false, onOpen }: { item: Extract<ChatItem, { kind: 'tool' }>; compact?: boolean; detailsOnly?: boolean; onOpen?: () => void }) {
   const [open, setOpen] = useState(() => detailsOnly || item.status === 'running' || item.status === 'generating')
   const [stored, setStored] = useState<string | null>(() => outputCache.get(item.id) ?? null)
@@ -80,11 +93,12 @@ export const ToolCard = memo(function ToolCard({ item, compact = false, detailsO
   const icon = TOOL_ICONS[item.name] || '🔧'
   if (compact) {
     return (
-      <button className={`tool-placeholder tool-${item.status}`} onClick={() => { haptic(); onOpen?.() }} aria-label={`Show details for ${item.name}`}>
-        <span className="tool-icon">{icon}</span>
-        <span className="tool-placeholder-label">{item.context || (item.name === 'phone_app' ? phoneAppLabel(item.args) : '') || argsPreview(item.args) || item.name}</span>
-        <span className="tool-placeholder-state">{item.status === 'running' || item.status === 'generating' ? <Spinner small /> : item.status === 'error' ? '✕' : '✓'}</span>
-        <span className="tool-placeholder-more">…</span>
+      <button className={`tool-activity tool-${item.status}`} onClick={() => { haptic(); onOpen?.() }} aria-label={`Show activity details: ${toolActivityLabel(item)}`}>
+        <span className="tool-icon" aria-hidden="true">{icon}</span>
+        <span className="tool-activity-label">{toolActivityLabel(item)}</span>
+        <span className="tool-activity-state" aria-label={item.status}>
+          {item.status === 'running' || item.status === 'generating' ? <Spinner small /> : item.status === 'error' ? '✕' : '✓'}
+        </span>
       </button>
     )
   }
@@ -187,21 +201,15 @@ export const TerminalTranscript = memo(function TerminalTranscript({ items }: { 
 
 /** The line a folded run of tool calls shows: icons of the tools used, "Ran 7 tools · 42s", a chevron. */
 export const ToolRunHead = memo(function ToolRunHead({ id, run, open, onToggle, onOpen }: { id: string; run: ToolRun; open: boolean; onToggle: (id: string) => void; onOpen?: () => void }) {
-  const uniqueNames = [...new Set(run.names)]
-  const humanNames = uniqueNames.map(name => name.replaceAll('_', ' ')).join(', ')
+  const action = runSummary(run)
   return (
-    <button className={`tool-run${run.running ? ' running' : ''}`} aria-expanded={open} onClick={() => { haptic(); onOpen ? onOpen() : onToggle(id) }}>
-      <span className="tool-run-icons" aria-hidden="true">
-        {run.names.slice(0, 4).map(n => (
-          <span key={n} className="tool-icon">{TOOL_ICONS[n] || '🔧'}</span>
-        ))}
-      </span>
+    <button className={`tool-run${run.running ? ' running' : ''}`} aria-expanded={open} aria-label="Show task activity details" onClick={() => { haptic(); onOpen ? onOpen() : onToggle(id) }}>
+      <span className="tool-run-mark" aria-hidden="true">{run.running ? <Spinner small /> : run.errors ? '!' : '✓'}</span>
       <span className="tool-run-label">
-        {runSummary(run) || `Working on ${humanNames || 'your request'}`}
+        {run.running ? (action || 'Working') : (action || 'Completed task')}
         {run.errors ? <span className="tool-run-err"> · {run.errors} failed</span> : null}
-        <span className="tool-run-names">{run.running ? 'Working now' : runLabel(run)} · tap for details</span>
       </span>
-      {run.running ? <Spinner small /> : null}
+      <span className="tool-run-meta">{runLabel(run)} · details</span>
       <span className="chev" aria-hidden="true"><Chevron open={open} /></span>
     </button>
   )
@@ -221,13 +229,14 @@ function BrainIcon() {
 
 function Reasoning({ text, live }: { text: string; live: boolean }) {
   const [open, setOpen] = useState(false)
-  if (!text.trim()) return null
+  if (!text.trim() && !live) return null
   return (
     <div className={`reasoning${live ? ' live' : ''}${open ? ' open' : ''}`}>
       <button className="reasoning-head" aria-label={live ? 'Thinking…' : 'Thought process'} aria-expanded={open} onClick={() => setOpen(o => !o)}>
         {live ? <HermesPresence state="thinking" /> : <><span className="reasoning-dot"><BrainIcon /></span>Thought process<span className="chev"><Chevron open={open} /></span></>}
       </button>
-      <Collapse open={open}><div className="reasoning-body"><Linked text={text} /></div></Collapse>
+      {text.trim() && <div className="reasoning-peek">{text.trim().slice(-260)}</div>}
+      <Collapse open={open && Boolean(text.trim())}><div className="reasoning-body"><Linked text={text} /></div></Collapse>
     </div>
   )
 }
@@ -479,7 +488,7 @@ export const ItemView = memo(function ItemView({ item, actions = false, busy = f
       return <SubagentView item={item} />
     case 'notice':
       return (
-        <div className={`notice notice-${item.level}`}>
+        <div className={`notice notice-${item.level}${item.id.startsWith('progress-') ? ' progress-notice' : ''}`} role={item.level === 'error' ? 'alert' : item.id.startsWith('progress-') ? 'status' : undefined}>
           <Markdown text={item.text} />
         </div>
       )
@@ -519,14 +528,13 @@ function AssistantMsg({ item, actions, busy }: { item: Extract<ChatItem, { kind:
 
 function SubagentView({ item }: { item: Extract<ChatItem, { kind: 'subagent' }> }) {
   return (
-        <div className={`subagent sub-${item.status}`}>
-          <div className="sub-head">
-            <span>⇶ Sub-agent</span>
-            <span className="sub-status">{item.status}</span>
-          </div>
-          <div className="sub-goal"><Linked text={item.goal} /></div>
-          {item.detail && item.status !== 'done' && item.status !== 'completed' && <div className="sub-detail"><Linked text={item.detail} /></div>}
-          {item.summary && <div className="sub-summary"><Linked text={item.summary} /></div>}
+        <div className={`subagent-activity sub-${item.status}`}>
+          <span className="subagent-mark" aria-hidden="true">⇢</span>
+          <span className="subagent-copy"><span className="subagent-goal"><Linked text={item.goal} /></span>
+            {item.detail && item.status !== 'done' && item.status !== 'completed' && <span className="sub-detail"><Linked text={item.detail} /></span>}
+            {item.summary && <span className="sub-summary"><Linked text={item.summary} /></span>}
+          </span>
+          <span className="sub-status">{item.status}</span>
         </div>
   )
 }

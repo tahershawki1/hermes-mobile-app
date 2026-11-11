@@ -124,18 +124,17 @@ activity banner, status bar, compress hint, read-aloud player, background-app ca
   chips · tap shows the send time · actions under it: **Copy** (✓ flash), **Edit** (pencil; disabled while a reply
   runs). Edit mode: textarea, removable attachment chips, **Cancel**, **Send**.
 - **Assistant reply** · full-width, no bubble:
-  - **Thinking** head · "Thinking…" with spinner and a one-line peek while live, "Thought process" with a brain icon
-    when done · expands to the full reasoning.
+  - **Thinking** head · only the 22 px Hermes face while live, with a short preview of provider-emitted reasoning below;
+    the accessible label is "Thinking…" before text arrives; "Thought process" with a brain icon when done · expands to available reasoning.
   - **Body** · rich Markdown with a blinking caret while streaming; "⚠ warning" line when the turn ended badly.
   - **Actions** · **Copy** (picker: Text only / With formatting), **Read aloud** / **Stop reading**, **Retry**,
     **Branch**, and dim stats "~41 tok/s · 1m 23s · ctx 2% · 8k/200k".
-- **Tool card** · collapsed row: tool icon (⌘ terminal, ▶ code, 📄 read, ✎ write, 🔍 search, 🌐 web, 🧭 browser,
-  ✦ skill, 🧠 memory, ☑ todo, ⇶ sub-agent, 👁 vision, 🎨 image, ✉ message, 📱 phone app, 🔧 other), tool name, one-line
-  label, state mark (spinner / duration ✓ / ✕) · generating / running / done / error / risky (red outline) ·
-  expanded: risk reason, Arguments, Summary, Diff, media, Output with exit code and **Copy**.
-- **Folded tool run** · three or more tools in a row fold into one line: up to four icons, "Ran 6 tools · 42s" or
-  "Running 6 tools…", "· 1 failed" in red, chevron.
-- **Sub-agent card** · "⇶ Sub-agent" + status, goal, latest detail, summary when done.
+- **Tool activity** · borderless transcript line with a useful action, target and state mark · tap opens the Activity
+  panel with tool name, risk reason, Arguments, Summary, Diff, media and Output with exit code and **Copy**. Tool
+  groups use one compact summary line; no tool card expands inside the conversation.
+- **Folded tool run** · three or more tools in a row fold into one borderless line: useful action summary, duration,
+  tool count, failures and running state. Tap opens the Activity panel.
+- **Sub-agent activity** · borderless line with status, goal, latest detail and summary when done.
 - **Notice** · info / warn / error box (steer notes, command output, compress result, send failures).
 - **Changed-files card** · "✎ 3 files changed +40 −12" · expands to file rows with their own counts (tap: diff
   sheet) and a **Checkpoints** button.

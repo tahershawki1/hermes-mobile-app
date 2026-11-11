@@ -1454,6 +1454,16 @@ client.onEvent((ev: GatewayEvent) => {
     case 'reasoning.delta':
       queueDelta('reasoning', String(payload.text || ''))
       break
+    case 'reasoning.available': {
+      // This is Hermes's fallback preview for non-streaming reasoning. It must not duplicate a
+      // reasoning.delta stream already in the open assistant segment.
+      flushDeltas()
+      const existing = [...(getState().active?.items || [])].reverse().find(
+        (item): item is Extract<ChatItem, { kind: 'assistant' }> => item.kind === 'assistant' && item.streaming
+      )
+      if (!existing?.reasoning.trim()) queueDelta('reasoning', String(payload.text || ''))
+      break
+    }
     case 'message.delta':
       queueDelta('text', String(payload.text || ''))
       break

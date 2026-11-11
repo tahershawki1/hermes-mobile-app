@@ -1,0 +1,1 @@
+- **Follow model progress in chat.** Tool and sub-agent cards are now compact, readable activity lines, with detailed output available in the Activity panel. Provider-emitted reasoning previews and meaningful Hermes status updates stay visible as the model works. Verified in browser tests; not yet checked on a real phone.
