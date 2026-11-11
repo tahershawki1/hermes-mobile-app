@@ -64,7 +64,9 @@ describe('a whole turn (the "read the note" flow)', () => {
     emit('reasoning.delta', { text: 'the note.' })
     emit('tool.generating', { name: 'read_file' })
     emit('tool.start', { tool_id: 'call_1', name: 'read_file', context: 'note.txt', args: { path: 'note.txt' } })
+    expect(getState().active!.status).toBe('Reading files…')
     emit('tool.complete', { tool_id: 'call_1', name: 'read_file', result: { content: 'hi' }, duration_s: 0.1 })
+    expect(getState().active!.status).toBe('Reviewing results…')
     emit('message.delta', { text: 'The note ' })
     emit('message.delta', { text: 'says hi.' })
     vi.advanceTimersByTime(200) // the batched deltas
@@ -116,6 +118,7 @@ describe('tool cards', () => {
     expect(shape()).toEqual([{ kind: 'tool', id: expect.any(String), name: 'write_file', status: 'generating', resultText: undefined }])
     emit('tool.start', { tool_id: 'call_3', name: 'write_file' })
     expect(shape()).toEqual([{ kind: 'tool', id: 'call_3', name: 'write_file', status: 'running', resultText: undefined }])
+    expect(getState().active!.status).toBe('Updating a file…')
   })
 
   test('a replayed tool.start adds no second card', () => {

@@ -1,0 +1,1 @@
+- **Live execution updates.** Hermes now changes the chat status as it starts thinking, prepares a tool, runs it, and reviews its result, so you can follow progress while the answer is being formed. The labels describe observed work and do not expose hidden reasoning. Verified with gateway event tests; no phone tested.
