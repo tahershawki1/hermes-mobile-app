@@ -21,7 +21,7 @@ All the sheets below share the `Shell` frame in `web/src/components/Sheets.tsx` 
 | Star button per row | ☆ / ★ (aria-label "Star <model>" / "Unstar <model>") | Toggles the favourite. | none | |
 | Status text | "Loading models…" until the first answer; an error box if `model.options` failed. | | | |
 
-**Data:** `model.options` through `model-options-cache.ts`: the profile's in-memory catalog shows at once; the first open (then at most once every 30 minutes) renews expired subscription tokens through `POST /refresh-logins` and requests `refresh: true`. A provider/sign-in change invalidates it. Also `config.set` (keys `model`, `reasoning`), `session.create`, `session.close`; `hm.favModels.v1`, `hm.customModels.v1`.
+**Data:** `model.options` through `model-options-cache.ts`: the profile's in-memory or persisted (`hm.modelOptions.v1:`) catalog shows at once, including after app restart; the first uncached open (then at most once every 30 minutes) renews expired subscription tokens through `POST /refresh-logins` and requests `refresh: true`. A provider/sign-in change invalidates it. Also `config.set` (keys `model`, `reasoning`), `session.create`, `session.close`; `hm.favModels.v1`, `hm.customModels.v1`.
 **Rules:** favourites are shared by all profiles and keyed by provider + model (`web/src/favs.ts`); a favourite whose provider is not signed in on this profile simply does not show.
 
 How picking works (`setModel` in `gateway.ts`):
