@@ -1308,6 +1308,17 @@ function closeAssistant(): void {
 
 let lastEventAt = Date.now()
 
+/** Show observed execution phases; never synthesize private model reasoning. */
+function liveToolStatus(name: string): string {
+  const labels: Record<string, string> = {
+    terminal: 'Running a command…', execute_code: 'Running code…', read_file: 'Reading files…',
+    search_files: 'Searching files…', write_file: 'Updating a file…', patch: 'Editing files…',
+    web_search: 'Searching the web…', web_extract: 'Reading web pages…', delegate_task: 'Working on a subtask…',
+    browser_navigate: 'Opening a web page…', clarify: 'Waiting for your answer…'
+  }
+  return labels[name] || `Using ${name.replaceAll('_', ' ')}…`
+}
+
 // Streamed text is applied in small batches, not per token: each change re-renders the reply's markdown,
 // which gets slow on long answers. Any other event flushes first, so the order of things never changes.
 let pending = { id: '', text: '', reasoning: '' }
@@ -1418,7 +1429,7 @@ client.onEvent((ev: GatewayEvent) => {
     }
     case 'message.start':
       stream = { chars: 0, ms: 0, last: 0, total: 0, start: performance.now() }
-      updateActive(a => ({ running: true, tps: null, turnStart: a.turnStart ?? Date.now() })) // more than one message.start per turn: keep the first
+      updateActive(a => ({ running: true, status: 'Thinking…', tps: null, turnStart: a.turnStart ?? Date.now() })) // more than one message.start per turn: keep the first
       break
     case 'thinking.delta':
       updateActive(() => ({ status: String(payload.text || '') }))
@@ -1449,6 +1460,7 @@ client.onEvent((ev: GatewayEvent) => {
     case 'tool.generating': {
       closeAssistant()
       const name = String(payload.name || 'tool')
+      updateActive(() => ({ status: `Preparing ${name.replaceAll('_', ' ')}…` }))
       // Plugin tools (canvas) stream under the generic name until tool.start; a long one is a document being written.
       if (name === 'canvas' || name === 'tool_call' || name === 'mcp__tool_call') canvasWritingStarted()
       pushItem({ kind: 'tool', id: newId('tg'), name, status: 'generating' })
@@ -1457,6 +1469,7 @@ client.onEvent((ev: GatewayEvent) => {
     case 'tool.start': {
       closeAssistant()
       const p = payload as unknown as ToolStartPayload
+      updateActive(() => ({ status: liveToolStatus(p.name) }))
       const cur = getState().active!.items
       // Deferred/plugin tools stream as a generic "tool_call": the real name only arrives with tool.start.
       const gens = [...cur].reverse().filter(i => i.kind === 'tool' && i.status === 'generating')
@@ -1496,6 +1509,10 @@ client.onEvent((ev: GatewayEvent) => {
           : it
       if (exists) patchItem(p.tool_id, done)
       else pushItem(done({ kind: 'tool', id: p.tool_id, name: p.name, status: 'done' }))
+      const stillRunning = [...(getState().active?.items || [])].reverse().find(
+        (item): item is Extract<ChatItem, { kind: 'tool' }> => item.kind === 'tool' && (item.status === 'running' || item.status === 'generating')
+      )
+      updateActive(() => ({ status: stillRunning ? liveToolStatus(stillRunning.name) : 'Reviewing results…' }))
       if (p.name === 'canvas') canvasToolDone(p.result_text ?? (typeof p.result === 'string' ? p.result : p.result != null ? JSON.stringify(p.result) : null), p.args)
       break
     }
