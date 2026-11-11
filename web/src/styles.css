@@ -724,6 +724,10 @@ textarea {
   color: var(--dim);
   white-space: nowrap;
 }
+.tool-run-current {
+  color: var(--dim);
+  font-weight: 400;
+}
 .tool-run-err {
   color: var(--err);
 }
@@ -1000,6 +1004,18 @@ textarea {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.stop-status-mark {
+  color: var(--warn);
+  font-weight: 800;
+  width: 13px;
+  flex: none;
+  text-align: center;
+}
+.stop-pending {
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
 }
 .goal-line {
   display: block;

@@ -56,8 +56,10 @@ Actions are not drawn on earlier segments of a turn (a reply split by tool calls
 
 `ToolCard` keeps its structured data for the Activity panel. In the conversation each tool call is a single borderless
 line with a useful action and target (for example, "Read notes/today.md") and a spinner, completion mark or error mark.
-Groups of three or more calls fold into one borderless summary line (`ToolRunHead`, aria-label `Show task activity details`). Tapping a line opens Activity details; arguments
-and output never expand inline.
+When a completed tool has a Hermes-provided summary, that concise result replaces the generic action label. Groups of
+three or more calls fold into one borderless summary line (`ToolRunHead`, aria-label `Show task activity details`);
+while a group runs it also names the current observed action and target (for example, "Currently: Searching the web
+for …"). Tapping a line opens Activity details; arguments and output never expand inline.
 
 **Live terminal transcript.** Consecutive `terminal` calls in a tool run are drawn together in one `.terminal-transcript`, while non-terminal tools remain separate. The transcript has the accessible label `Terminal activity`. Hermes emits `terminal.output` chunks tagged with `tool_id` as the local foreground command writes output; chunks are force-redacted before sending and kept to the most recent 20,000 characters per call in the app. The combined display clips at 100,000 characters. The transcript shows each command and its output, updates while the command runs, then uses the final `tool.complete` output when available. The terminal panel caps its height at 38% of the viewport and scrolls internally. Remote terminal backends and identical concurrent commands do not stream; their final result still appears. See [live terminal transcript decision](../decisions/live-terminal-transcript.md).
 
@@ -68,7 +70,7 @@ and output never expand inline.
 - **Opening and closing:** the body is wrapped in `Collapse` (`ui.tsx`), so it slides open and closed in 180 ms (see Motion in 3.20). After a tap that closes it, the body stays mounted until the animation ends.
 - **Expanded body**, in order: Arguments (JSON; the noisy file body and replaced strings are left out when a diff is shown), Summary, Diff (Hermes's inline diff, or a diff built from the `memory` tool's arguments, or a diff found in the result), any image / video / audio path or URL found in the output (drawn with `Media`), Output (readable part of a JSON result, with `exit N` and error in the caption, a Copy button, cut at 20,000 characters).
 - **Stored output.** A tool activity restored from history has no result text. When opened from the Activity panel, it fetches the output from the plugin (`GET /tool-result?id=<tool call id>`), shows "Loading output…", caches it, and says "No output recorded" if there is none. Items with a locally made id are not fetched.
-- **Folding.** `web/src/fold.ts` `toolRuns` finds runs of at least three tool calls with only tool calls and reasoning-only replies between them. A folded run is one borderless line (`ToolRunHead`) with a useful summary such as "Read 3 files · Ran 8 commands", duration and count, failure count and current running state. Raw tool names, arguments and output stay in the Activity panel. Tapping the line opens details; the chat never expands tool cards inline. Every item keeps its own element in the list so message search can find it by position.
+- **Folding.** `web/src/fold.ts` `toolRuns` finds runs of at least three tool calls with only tool calls and reasoning-only replies between them. A folded run is one borderless line (`ToolRunHead`) with a useful summary such as "Read 3 files · Ran 8 commands", duration and count, failure count and current running state. While active it also names the latest observed operation and target. A completed tool uses Hermes's actual `summary`, when available, rather than a generic verb. Raw tool arguments and full output stay in the Activity panel. Tapping the line opens details; the chat never expands tool cards inline. Every item keeps its own element in the list so message search can find it by position.
 
 #### Sub-agent activity
 

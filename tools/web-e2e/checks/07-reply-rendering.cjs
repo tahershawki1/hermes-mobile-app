@@ -192,6 +192,7 @@ module.exports = async t => {
   await page.locator('.msg.assistant', { hasText: 'All four done.' }).waitFor({ timeout: 5000 })
   const run = page.locator('.tool-run').last()
   check(((await run.textContent()) || '').includes('Ran 4 tools · 6s'), `one folded line for the run (${await run.textContent()})`)
+  check(((await run.textContent()) || '').includes('Found one matching file'), 'completed tool run includes Hermes’s actual result summary')
   const visibleCards = () => page.locator('.tool:visible', { hasText: /step [0-3]/ }).count()
   check((await visibleCards()) === 0, 'its cards are hidden')
   await run.click()
@@ -210,6 +211,14 @@ module.exports = async t => {
   await card0.locator('.tool-body').waitFor({ state: 'detached', timeout: 3000 }).then(() => check(true, 'activity details collapses a tool body'), () => check(false, 'activity details collapses a tool body'))
   await page.getByRole('button', { name: 'Close activity details' }).click()
   await page.locator('.tool-details-panel').waitFor({ state: 'detached', timeout: 3000 })
+
+  // While a multi-tool run is active, its compact transcript names the current action and target.
+  await page.getByPlaceholder('Message Hermes').fill('live tool group')
+  await page.locator('.composer').getByRole('button', { name: 'Send' }).click()
+  const liveCurrent = page.locator('.tool-run-current').filter({ hasText: 'Currently: Searching the web for Hermes mobile release notes' })
+  await liveCurrent.waitFor({ timeout: 3000 }).then(() => check(true, 'live folded activity names the current operation and target'), () => check(false, 'live folded activity names the current operation and target'))
+  await page.locator('.msg.assistant', { hasText: 'The search found three pages.' }).waitFor({ timeout: 5000 })
+  check(((await page.locator('.tool-run').last().textContent()) || '').includes('Found 3 relevant pages'), 'the completed folded activity retains the actual result')
 
   check((await page.locator('.turn-changes').count()) === 0, 'a turn with only terminal tools has no changes card')
 

@@ -11,7 +11,7 @@ import { api } from '../api'
 import { Lightbox, Media } from './Media'
 import { DiffView, looksLikeDiff } from './Diff'
 import { fmtDuration, formatOutput, memoryDiff, phoneAppLabel, plainText } from '../text'
-import { runLabel, runSummary, type ToolRun } from '../fold'
+import { runCurrentAction, runLabel, runResultSummary, runSummary, type ToolRun } from '../fold'
 import { Spinner } from './Spinner'
 import { HermesPresence } from './HermesPresence'
 import { Linked } from './Linked'
@@ -59,6 +59,7 @@ const TOOL_ACTIONS: Record<string, string> = {
 }
 
 function toolActivityLabel(item: Extract<ChatItem, { kind: 'tool' }>): string {
+  if (item.status === 'done' && item.summary?.trim()) return item.summary.trim()
   const subject = item.context || (item.name === 'phone_app' ? phoneAppLabel(item.args) : '') || argsPreview(item.args)
   const action = TOOL_ACTIONS[item.name] || `Used ${item.name.replaceAll('_', ' ')}`
   return subject ? `${action} ${subject}` : action
@@ -200,13 +201,17 @@ export const TerminalTranscript = memo(function TerminalTranscript({ items }: { 
 })
 
 /** The line a folded run of tool calls shows: icons of the tools used, "Ran 7 tools · 42s", a chevron. */
-export const ToolRunHead = memo(function ToolRunHead({ id, run, open, onToggle, onOpen }: { id: string; run: ToolRun; open: boolean; onToggle: (id: string) => void; onOpen?: () => void }) {
+export const ToolRunHead = memo(function ToolRunHead({ id, items, run, open, onToggle, onOpen }: { id: string; items: ChatItem[]; run: ToolRun; open: boolean; onToggle: (id: string) => void; onOpen?: () => void }) {
   const action = runSummary(run)
+  const current = runCurrentAction(items, run)
+  const result = runResultSummary(run)
   return (
     <button className={`tool-run${run.running ? ' running' : ''}`} aria-expanded={open} aria-label="Show task activity details" onClick={() => { haptic(); onOpen ? onOpen() : onToggle(id) }}>
       <span className="tool-run-mark" aria-hidden="true">{run.running ? <Spinner small /> : run.errors ? '!' : '✓'}</span>
-      <span className="tool-run-label">
+      <span className="tool-run-label" title={current || result || action}>
         {run.running ? (action || 'Working') : (action || 'Completed task')}
+        {current ? <span className="tool-run-current"> · Currently: {current}</span> : null}
+        {!run.running && result ? <span className="tool-run-current"> · {result}</span> : null}
         {run.errors ? <span className="tool-run-err"> · {run.errors} failed</span> : null}
       </span>
       <span className="tool-run-meta">{runLabel(run)} · details</span>

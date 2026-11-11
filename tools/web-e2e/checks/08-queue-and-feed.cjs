@@ -105,6 +105,17 @@ module.exports = async t => {
     await page.locator('.msg.assistant', { hasText: 'Queued e done.' }).waitFor({ timeout: 6000 }).then(() => check(true, 'Resume after a reload sends it'), () => check(false, 'Resume after a reload sends it'))
   }
 
+  // ── Stop is acknowledged in the UI while the mock delays cancellation confirmation ──
+  await page.getByPlaceholder('Message Hermes').fill('slow stop acknowledgement')
+  await page.locator('.composer').getByRole('button', { name: 'Send' }).click()
+  await page.locator('.composer').getByRole('button', { name: 'Stop', exact: true }).waitFor({ timeout: 3000 })
+  await page.locator('.composer').getByRole('button', { name: 'Stop', exact: true }).click()
+  await page.locator('.composer').getByRole('button', { name: 'Stopping…', exact: true }).waitFor({ timeout: 300 })
+    .then(() => check(true, 'Stop immediately changes to Stopping while cancellation is pending'), () => check(false, 'Stop immediately changes to Stopping while cancellation is pending'))
+  await page.getByRole('status').filter({ hasText: 'Stopping…' }).waitFor({ timeout: 300 })
+    .then(() => check(true, 'the status bar confirms cancellation is in progress'), () => check(false, 'the status bar confirms cancellation is in progress'))
+  await page.locator('.composer').getByRole('button', { name: 'Send' }).waitFor({ timeout: 3000 })
+
   // ── the model Hermes reports sits above the composer; tap opens the picker ──
   const chip = page.locator('.model-chip')
   check(((await chip.textContent()) || '').includes('mock-model'), `model chip shows the chat's model (${await chip.textContent()})`)

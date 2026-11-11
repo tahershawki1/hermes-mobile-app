@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { foldMap } from './fold'
+import { foldMap, runCurrentAction, runResultSummary } from './fold'
 import type { ChatItem } from './store'
 
 const tool = (id: string, status: 'done' | 'running'): ChatItem => ({
@@ -29,5 +29,26 @@ describe('terminal visibility', () => {
     expect(folds.get(0)).toMatchObject({ head: { names: ['terminal'] }, hidden: false })
     expect(folds.get(1)).toBeUndefined()
     expect(folds.get(2)).toMatchObject({ head: { names: ['terminal'] }, hidden: false })
+  })
+})
+
+describe('live tool descriptions', () => {
+  it('names the current observed action and target within a folded run', () => {
+    const items: ChatItem[] = [
+      { kind: 'tool', id: 'a', name: 'read_file', status: 'done', args: { path: 'README.md' } },
+      { kind: 'tool', id: 'b', name: 'web_search', status: 'done', args: { query: 'Hermes mobile docs' } },
+      { kind: 'tool', id: 'c', name: 'web_search', status: 'running', args: { query: 'Hermes mobile docs' } }
+    ]
+    const run = foldMap(items, new Set()).get(0)
+    expect(run && 'head' in run ? runCurrentAction(items, run.head) : '').toBe('Searching the web for Hermes mobile docs')
+  })
+  it('keeps Hermes-provided completion results in the folded summary', () => {
+    const items: ChatItem[] = [
+      { kind: 'tool', id: 'a', name: 'read_file', status: 'done' },
+      { kind: 'tool', id: 'b', name: 'search_files', status: 'done' },
+      { kind: 'tool', id: 'c', name: 'web_search', status: 'done', summary: 'Found 4 relevant pages' }
+    ]
+    const run = foldMap(items, new Set()).get(0)
+    expect(run && 'head' in run ? runResultSummary(run.head) : '').toBe('Found 4 relevant pages')
   })
 })

@@ -3,7 +3,7 @@
 // Hermes's (the ones tools/web-e2e/mock.cjs plays and tools/hermes-contract compares) through the real client's event
 // hub, with no socket, and check the items the chat would show.
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { client } from './gateway'
+import { client, interrupt } from './gateway'
 import { getState, setState, type ActiveSession, type ChatItem } from './store'
 
 const RT = 'rt-ev'
@@ -174,6 +174,24 @@ describe('tool cards', () => {
     emit('tool.generating', { name: 'patch' })
     emit('message.complete', { text: '', status: 'complete' })
     expect(items().some(i => i.kind === 'tool')).toBe(false)
+  })
+})
+
+describe('stopping a running turn', () => {
+  test('acknowledges Stop immediately while waiting for Hermes to confirm cancellation', async () => {
+    open()
+    setState({ active: { ...getState().active!, running: true } })
+    let resolve!: (value: unknown) => void
+    const request = vi.spyOn(client, 'request').mockImplementation(() => new Promise(r => { resolve = r }) as never)
+    const pending = interrupt()
+    expect(getState().active).toMatchObject({ running: true, stopping: true, status: 'Stopping…' })
+    expect(request).toHaveBeenCalledWith('session.interrupt', expect.objectContaining({ session_id: RT }), undefined)
+    resolve({ status: 'interrupted' })
+    await pending
+    expect(getState().active?.stopping).toBe(true)
+    emit('message.complete', { status: 'interrupted' })
+    expect(getState().active).toMatchObject({ running: false, stopping: false, status: '' })
+    request.mockRestore()
   })
 })
 
