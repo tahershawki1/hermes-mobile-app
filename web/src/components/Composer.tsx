@@ -85,6 +85,7 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
   const [stashMenu, setStashMenu] = useState(false)
   const [attaching, setAttaching] = useState(0)
   const running = useStore(s => s.active?.running ?? false)
+  const stopping = useStore(s => s.active?.stopping ?? false)
   const model = useStore(s => s.active?.info.model ?? s.defaultModel)
   const effort = useStore(s => s.active?.info.reasoning_effort || s.defaultEffort)
   const attachments = useStore(s => s.active?.attachments ?? EMPTY)
@@ -598,13 +599,13 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
             <span className="stop-square" />
           </button>
         ) : running && !text.trim() && !quotes.length && !attachments.length ? (
-          <button key="stop" className="send stop" aria-label="Stop" onClick={() => { haptic(); void interrupt() }}>
-            <span className="stop-square" />
+          <button key="stop" className="send stop" aria-label={stopping ? 'Stopping…' : 'Stop'} disabled={stopping} onClick={() => { haptic(); void interrupt() }}>
+            {stopping ? <span className="stop-pending" aria-hidden="true">…</span> : <span className="stop-square" />}
           </button>
         ) : running ? (
           <Fragment key="run">
-            <button className="send stop" aria-label="Stop" title="Stop the running task" onClick={() => { haptic(); void interrupt() }}>
-              <span className="stop-square" />
+            <button className="send stop" aria-label={stopping ? 'Stopping…' : 'Stop'} title={stopping ? 'Asking Hermes to stop' : 'Stop the running task'} disabled={stopping} onClick={() => { haptic(); void interrupt() }}>
+              {stopping ? <span className="stop-pending" aria-hidden="true">…</span> : <span className="stop-square" />}
             </button>
             <button className="send steer" aria-label="Steer" title="Send into the running task now" onClick={() => void send()} disabled={busy || !!opening}>
               Steer

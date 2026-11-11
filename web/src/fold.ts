@@ -14,6 +14,8 @@ export interface ToolRun {
   names: string[]
   /** Number of calls for each tool, kept in first-use order by `names`. */
   counts: Record<string, number>
+  /** Latest human-readable result supplied by Hermes. */
+  latestSummary?: string
 }
 
 /** Fewer calls than this stay as plain cards. */
@@ -55,7 +57,8 @@ export function toolRuns(items: ChatItem[]): ToolRun[] {
         errors: tools.filter(t => t.status === 'error').length,
         running: tools.some(t => t.status === 'running' || t.status === 'generating'),
         names: [...new Set(tools.map(t => t.name))],
-        counts
+        counts,
+        latestSummary: [...tools].reverse().find(t => t.summary?.trim())?.summary?.trim()
       })
     }
     i = end
@@ -94,7 +97,7 @@ const ACTIONS: Record<string, { one: string; many: string; verb: string }> = {
   terminal: { one: 'command', many: 'commands', verb: 'Ran' },
   execute_code: { one: 'code block', many: 'code blocks', verb: 'Ran' },
   read_file: { one: 'file', many: 'files', verb: 'Read' },
-  search_files: { one: 'search', many: 'searches', verb: 'Searched' },
+  search_files: { one: 'pattern', many: 'patterns', verb: 'Searched' },
   write_file: { one: 'file', many: 'files', verb: 'Updated' },
   patch: { one: 'file', many: 'files', verb: 'Edited' },
   web_search: { one: 'web search', many: 'web searches', verb: 'Ran' },
@@ -110,4 +113,30 @@ export function runSummary(r: ToolRun): string {
     if (!action) return `${name.replaceAll('_', ' ')} ×${count}`
     return `${action.verb} ${count} ${count === 1 ? action.one : action.many}`
   }).join(' · ')
+}
+
+/** Describe the latest in-flight operation using only its observed tool name and arguments. */
+export function runCurrentAction(items: ChatItem[], r: ToolRun): string {
+  let tool: Extract<ChatItem, { kind: 'tool' }> | undefined
+  for (let i = r.start; i < r.end; i++) {
+    const item = items[i]
+    if (item?.kind === 'tool' && (item.status === 'running' || item.status === 'generating')) tool = item
+  }
+  if (!tool) return ''
+  const action: Record<string, string> = {
+    terminal: 'Running command', execute_code: 'Running code', read_file: 'Reading', write_file: 'Writing',
+    patch: 'Editing', search_files: 'Searching files for', web_search: 'Searching the web for',
+    web_extract: 'Reading webpage', browser_navigate: 'Opening', delegate_task: 'Working on subtask'
+  }
+  const target = tool.context || (typeof tool.args?.command === 'string' ? tool.args.command : '') ||
+    (typeof tool.args?.path === 'string' ? tool.args.path : '') ||
+    (typeof tool.args?.query === 'string' ? tool.args.query : '') ||
+    (typeof tool.args?.url === 'string' ? tool.args.url : '') ||
+    (typeof tool.args?.goal === 'string' ? tool.args.goal : '')
+  const verb = action[tool.name] || `Running ${tool.name.replaceAll('_', ' ')}`
+  return target ? `${verb} ${target}` : verb
+}
+
+export function runResultSummary(r: ToolRun): string {
+  return r.latestSummary || ''
 }

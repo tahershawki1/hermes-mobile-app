@@ -953,9 +953,9 @@ wss.on('connection', ws => {
           later(1500, live(() => event('message.complete', sid, { text: 'Busy done.' })))
           return
         }
-        if (/^slow reply$/.test(params.text)) {
+        if (/^(slow reply|slow stop acknowledgement)$/.test(params.text)) {
           // A reply that takes 1.5 s, so a follow-up can be queued meanwhile; Stop (session.interrupt) ends it early.
-          const turn = { row, text: '', timers: [] }
+          const turn = { row, text: '', timers: [], stopAckDelay: params.text === 'slow stop acknowledgement' ? 400 : 0 }
           turn.timers = [
             later(100, live(() => event('message.start', sid, {}))),
             later(300, live(() => ((turn.text = 'Slow done.'), event('message.delta', sid, { text: 'Slow done.' })))),
@@ -1016,11 +1016,27 @@ wss.on('connection', ws => {
           ]
           for (const [i, [name, args, result]] of calls.entries()) {
             later((t += 40), () => event('tool.start', sid, { tool_id: `call_${i}`, name, context: `step ${i}`, args }))
-            later((t += 40), () => event('tool.complete', sid, { tool_id: `call_${i}`, name, args, duration_s: 1.5, result }))
+            later((t += 40), () => event('tool.complete', sid, { tool_id: `call_${i}`, name, args, duration_s: 1.5, summary: i === 3 ? 'Found one matching file' : undefined, result }))
             if (i === 1) later((t += 20), () => event('reasoning.delta', sid, { text: 'thinking between calls' }))
           }
           later((t += 60), () => event('message.start', sid, {}))
           later((t += 40), () => event('message.complete', sid, { text: 'All four done.' }))
+          return
+        }
+        if (/^live tool group$/.test(params.text)) {
+          const calls = [
+            { tool_id: 'live_group_1', name: 'read_file', context: 'README.md', args: { path: 'README.md' } },
+            { tool_id: 'live_group_2', name: 'search_files', context: 'install docs', args: { pattern: 'install', path: 'docs' } },
+            { tool_id: 'live_group_3', name: 'web_search', context: 'Hermes mobile release notes', args: { query: 'Hermes mobile release notes' } }
+          ]
+          later(50, () => event('tool.start', sid, calls[0]))
+          later(150, () => event('tool.complete', sid, { ...calls[0], duration_s: 0.1, summary: 'Read the project overview' }))
+          later(250, () => event('tool.start', sid, calls[1]))
+          later(350, () => event('tool.complete', sid, { ...calls[1], duration_s: 0.1, summary: 'Found 2 matching files' }))
+          later(450, () => event('tool.start', sid, calls[2]))
+          later(1250, () => event('tool.complete', sid, { ...calls[2], duration_s: 0.8, summary: 'Found 3 relevant pages' }))
+          later(1350, () => event('message.start', sid, {}))
+          later(1450, () => event('message.complete', sid, { text: 'The search found three pages.' }))
           return
         }
         if (/^edit files$/.test(params.text)) {
@@ -1195,13 +1211,15 @@ wss.on('connection', ws => {
       case 'session.interrupt': {
         // Hermes answers {status: 'interrupted'} (also for a chat that is not running); a running turn ends with message.complete
         // whose status is 'interrupted' and whose text is what had streamed so far.
-        reply({ status: 'interrupted' })
         const t = slowTurns.get(params.session_id)
         if (t) {
           t.timers.forEach(clearTimeout)
           slowTurns.delete(params.session_id)
-          later(50, live(() => event('message.complete', params.session_id, { text: t.text, usage: usageN(2), status: 'interrupted', persisted_turn: { row_ids: [t.row, t.row + 1], complete: false, user_row_id: t.row } })))
+          later(t.stopAckDelay || 0, () => reply({ status: 'interrupted' }))
+          later((t.stopAckDelay || 0) + 50, live(() => event('message.complete', params.session_id, { text: t.text, usage: usageN(2), status: 'interrupted', persisted_turn: { row_ids: [t.row, t.row + 1], complete: false, user_row_id: t.row } })))
           later(100, live(() => event('session.info', params.session_id, CHAT_INFO)))
+        } else {
+          reply({ status: 'interrupted' })
         }
         return
       }

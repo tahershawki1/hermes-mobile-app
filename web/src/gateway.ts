@@ -1005,12 +1005,17 @@ const bare = (s: string) => s.replace(/^\/+/, '').trim()
 
 export async function interrupt(): Promise<void> {
   const a = getState().active
-  if (!a) return
-  if (a.running) turnFailed = true // the queue pauses when this turn ends
+  if (!a?.running || a.stopping) return
+  const previousStatus = a.status
+  turnFailed = true // the queue pauses when this turn ends
+  // Acknowledge the tap synchronously; keep running true until Hermes confirms completion.
+  updateActive(cur => cur.runtimeId === a.runtimeId ? { stopping: true, status: 'Stopping…' } : null)
   try {
     await rpc('session.interrupt', { session_id: a.runtimeId })
   } catch (err) {
+    updateActive(cur => cur.runtimeId === a.runtimeId ? { stopping: false, status: previousStatus } : null)
     toast(errText(err), 'error')
+    void syncRunning()
   }
 }
 
@@ -1604,7 +1609,7 @@ client.onEvent((ev: GatewayEvent) => {
       const turnSecs = turnStartSecs()
       const watching = getState().active?.storedId
       if (watching && document.visibilityState === 'visible' && !isAway()) markVisit(watching) // they watched the turn end
-      updateActive(() => ({ running: false, status: '', turnStart: null, usage: p.usage ?? getState().active?.usage ?? null }))
+      updateActive(() => ({ running: false, stopping: false, status: '', turnStart: null, usage: p.usage ?? getState().active?.usage ?? null }))
       void finishTurnStats(lastId, p.usage, turnSecs)
       break
     }

@@ -300,6 +300,7 @@ const GOAL_HIDDEN = new Set(['cleared', 'done', 'complete', 'completed', 'achiev
 
 function StatusBar() {
   const running = useStore(s => s.active?.running ?? false)
+  const stopping = useStore(s => s.active?.stopping ?? false)
   const status = useStore(s => s.active?.status ?? '')
   const todos = useStore(s => s.active?.todos ?? EMPTY_TODOS)
   const tps = useStore(s => s.active?.tps ?? null)
@@ -316,7 +317,7 @@ function StatusBar() {
     <div className="statusbar">
       {running && (
         <div className="status-line">
-          <Spinner small /> <span className="status-text">{status || 'Working…'}</span>
+          {stopping ? <span className="stop-status-mark" aria-hidden="true">Ⅱ</span> : <Spinner small />} <span className="status-text" role="status">{stopping ? 'Stopping…' : status || 'Working…'}</span>
           {elapsed >= 3000 ? <span className="dim small status-elapsed">{fmtClock(elapsed / 1000)}</span> : null}
           {tps ? <span className="dim small">~{tps} tok/s</span> : null}
           {ctx && <span className="dim small">{fmtCtx(ctx).split(' · ')[0]}</span>}
@@ -775,6 +776,7 @@ function Chat({ onPick }: { onPick: (t: string) => void }) {
             {(
               <ToolRunHead
                 id={it.id}
+                items={items}
                 run={f.head}
                 open={false}
                 onToggle={toggleRun}

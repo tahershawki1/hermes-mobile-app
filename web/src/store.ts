@@ -90,6 +90,8 @@ export interface ActiveSession {
   info: SessionLiveInfo
   items: ChatItem[]
   running: boolean
+  /** The user has requested cancellation; remains running until Hermes confirms the turn ended. */
+  stopping?: boolean
   status: string // live "thinking.delta" spinner text
   usage: Usage | null
   /** Context window fill, from provider usage or Hermes's local estimate (context_breakdown). */
