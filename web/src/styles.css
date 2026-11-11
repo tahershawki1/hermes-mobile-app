@@ -572,18 +572,15 @@ textarea {
 
 /* reasoning */
 .reasoning {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-bottom: 8px;
-  background: var(--surface);
-  overflow: hidden;
+  margin: 0 0 6px;
 }
 .reasoning-head {
-  width: 100%;
+  width: auto;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 10px;
+  min-height: 32px;
+  padding: 3px 0;
   font-size: 0.8rem;
   color: var(--dim);
 }
@@ -596,7 +593,7 @@ textarea {
 }
 .reasoning-body,
 .reasoning-peek {
-  padding: 0 12px 10px;
+  padding: 2px 0 8px 30px;
   font-size: 0.8rem;
   color: var(--dim);
   white-space: pre-wrap;
@@ -609,6 +606,12 @@ textarea {
 .reasoning-peek {
   font-style: italic;
   opacity: 0.8;
+  padding-top: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 /* tool cards */
@@ -683,47 +686,43 @@ textarea {
   overscroll-behavior: contain;
 }
 .tool-run {
-  width: 100%;
+  width: min(100%, 34rem);
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  min-height: 44px;
+  gap: 7px;
+  padding: 4px 0;
+  min-height: 32px;
   text-align: left;
-  border: 1px dashed var(--border);
-  border-radius: 10px;
+  border: 0;
+  background: transparent;
   color: var(--dim);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 .tool-run:active {
-  background: var(--press);
+  color: var(--text);
 }
 .tool-run.running {
-  border-style: solid;
-  border-color: var(--accent);
+  color: var(--text);
 }
-.tool-run-icons {
+.tool-run-mark {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
-}
-.tool-run-icons .tool-icon {
-  width: 18px;
-  font-size: 0.8rem;
+  width: 16px;
+  color: var(--accent);
 }
 .tool-run-label {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
   color: var(--text);
-}
-.tool-run-names {
-  color: var(--dim);
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tool-run-meta {
+  color: var(--dim);
+  white-space: nowrap;
 }
 .tool-run-err {
   color: var(--err);
@@ -875,35 +874,45 @@ textarea {
 }
 
 /* sub-agents, notices */
-.subagent {
-  border: 1px dashed var(--accent-2);
-  border-radius: 10px;
-  padding: 8px 10px;
-  font-size: 0.84rem;
-  background: #1a1610;
-}
-.sub-head {
+.subagent-activity {
   display: flex;
-  justify-content: space-between;
-  color: var(--accent);
-  font-size: 0.75rem;
-  margin-bottom: 3px;
+  align-items: flex-start;
+  gap: 7px;
+  width: min(100%, 34rem);
+  padding: 4px 0;
+  font-size: .8rem;
+  color: var(--dim);
+}
+.subagent-mark { color: var(--accent); flex: none; }
+.subagent-copy { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.subagent-goal { color: var(--text); }
+.subagent-activity .sub-status {
+  flex: none;
+  margin-inline-start: auto;
+  text-transform: capitalize;
 }
 .sub-status {
   color: var(--dim);
+  font-size: .75rem;
 }
 .sub-detail {
   color: var(--dim);
   font-family: var(--mono);
-  font-size: 0.74rem;
-  margin-top: 4px;
+  font-size: .72rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .sub-summary {
-  margin-top: 5px;
-  white-space: pre-wrap;
+  color: var(--dim);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.subagent-activity a {
+  color: inherit;
 }
 .notice {
   font-size: 0.82rem;
@@ -4060,28 +4069,37 @@ img.inline-frame { display: block; max-width: 100%; max-height: 60vh; margin: 0 
 }
 
 
-/* Clean chat activity: execution details live in a separate panel, not in the message stream. */
-.tool-placeholder {
+/* Compact execution transcript; arguments and output stay in the Activity panel. */
+.tool-activity {
   display: flex;
   align-items: center;
-  gap: .45rem;
+  gap: .5rem;
   width: min(100%, 34rem);
-  min-height: 1.8rem;
-  padding: .25rem .45rem;
+  min-height: 32px;
+  padding: .2rem 0;
   border: 0;
   background: transparent;
   color: var(--dim);
   text-align: start;
   font: inherit;
-  font-size: .82rem;
+  font-size: .8rem;
   cursor: pointer;
 }
-.tool-placeholder:hover,
-.tool-placeholder:focus-visible { color: var(--text); }
-.tool-placeholder-label,
-.tool-run-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tool-placeholder-state { margin-inline-start: auto; flex: none; }
-.tool-placeholder-more { flex: none; letter-spacing: .12em; color: var(--dim); }
+.tool-activity:hover,
+.tool-activity:focus-visible { color: var(--text); }
+.tool-activity .tool-icon { width: 16px; flex: none; font-size: .78rem; }
+.tool-activity-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-activity-state { margin-inline-start: auto; display: inline-flex; align-items: center; flex: none; color: var(--accent); }
+.tool-error .tool-activity-state { color: var(--err); }
+.progress-notice {
+  margin: 1px 0;
+  padding: 3px 0 3px 24px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--dim);
+  font-size: .8rem;
+}
 .tool-details-panel {
   position: fixed;
   z-index: 80;

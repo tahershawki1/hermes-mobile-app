@@ -5,12 +5,12 @@ The chat view draws `store.active.items`, an array of `ChatItem` (`web/src/store
 | Item kind | Made from | Drawn as |
 |---|---|---|
 | `user` | A sent prompt, or a stored user row. | Right-aligned bubble (below). |
-| `assistant` | Streamed `message.delta` / `reasoning.delta`, or a stored assistant row. | Reasoning block, Markdown reply, actions (below). |
-| `tool` | `tool.generating`, `tool.start`, `tool.complete`, or a stored tool row. | A compact folded activity line in the conversation; its full arguments, output and diffs open in the Activity details panel. |
-| `subagent` | `subagent.*` events. | Sub-agent card (below). |
+| `assistant` | Streamed `message.delta` / `reasoning.delta` / `reasoning.available`, or a stored assistant row. | Live reasoning preview, Markdown reply and actions (below). |
+| `tool` | `tool.generating`, `tool.start`, `tool.complete`, or a stored tool row. | A borderless activity line in the conversation; full arguments, output and diffs open in the Activity details panel. |
+| `subagent` | `subagent.*` events. | A compact borderless task line with goal, latest detail and summary. |
 | `notice` | Stored system rows; steer, slash, review, background and compress results; send failures; model errors. | Coloured box with Markdown text. |
 
-There is no separate item kind for approvals, images, files or errors. Approvals are a sheet (3.6). Images and files are parts of user messages (and of Markdown in replies). Errors are `notice` items with level `error`, or a tool card in the error state. Cards written by Hermes in a reply are Markdown code fences (3.9). `status.update` events add deduplicated progress notices to the conversation, so meaningful milestones are visible without exposing raw tool payloads.
+There is no separate item kind for approvals, images, files or errors. Approvals are a sheet (3.6). Images and files are parts of user messages (and of Markdown in replies). Errors are `notice` items with level `error`, or a tool activity line in the error state. Cards written by Hermes in a reply are Markdown code fences (3.9). `status.update` events add deduplicated progress lines to the conversation, so meaningful milestones are visible without exposing raw tool payloads.
 
 #### User message
 
@@ -25,7 +25,7 @@ There is no separate item kind for approvals, images, files or errors. Approvals
 
 `AssistantMsg`.
 
-- **Reasoning block** (`Reasoning`): hidden when there is no reasoning text. While the reply streams without text yet it shows only a 22 px expressive thinking face, with the accessible label `Thinking…` and no collapsed preview; once finished it reads "Thought process" with a brain icon. Tap to expand the full reasoning (links work).
+- **Reasoning block** (`Reasoning`): while streaming it shows only the 22 px expressive thinking face and a short live preview of provider-emitted reasoning text; its accessible label is `Thinking…` before that text arrives. Once finished it reads "Thought process" with a brain icon. Tap to expand the available text (links work). Providers that emit no reasoning still show the honest thinking state and execution events; the UI does not synthesize thoughts.
 - **Text** (`Markdown`, see below), with a blinking caret while streaming. While streaming, Markdown skips language detection for unlabelled code blocks (it waits for the finished reply).
 - **Warning line** "⚠ <warning>" when the turn ended with a warning.
 - **Actions** (only when the reply is finished and is the last text segment of its turn; `hasActions` in `App.tsx`): Copy, Read aloud, Retry, Branch, and the turn stats.
@@ -52,9 +52,12 @@ Actions are not drawn on earlier segments of a turn (a reply split by tool calls
 
 **Undo last turn** (chat menu, 3.5) calls `session.undo`, reloads the chat and toasts "Last turn undone". It is disabled while a reply runs.
 
-#### Tool card
+#### Tool activity
 
-`ToolCard`. One card per tool call, collapsed by default.
+`ToolCard` keeps its structured data for the Activity panel. In the conversation each tool call is a single borderless
+line with a useful action and target (for example, "Read notes/today.md") and a spinner, completion mark or error mark.
+Groups of three or more calls fold into one borderless summary line (`ToolRunHead`, aria-label `Show task activity details`). Tapping a line opens Activity details; arguments
+and output never expand inline.
 
 **Live terminal transcript.** Consecutive `terminal` calls in a tool run are drawn together in one `.terminal-transcript`, while non-terminal tools remain separate. The transcript has the accessible label `Terminal activity`. Hermes emits `terminal.output` chunks tagged with `tool_id` as the local foreground command writes output; chunks are force-redacted before sending and kept to the most recent 20,000 characters per call in the app. The combined display clips at 100,000 characters. The transcript shows each command and its output, updates while the command runs, then uses the final `tool.complete` output when available. The terminal panel caps its height at 38% of the viewport and scrolls internally. Remote terminal backends and identical concurrent commands do not stream; their final result still appears. See [live terminal transcript decision](../decisions/live-terminal-transcript.md).
 
@@ -64,12 +67,13 @@ Actions are not drawn on earlier segments of a turn (a reply split by tool calls
 - **Risk:** a tool flagged by Hermes (`tool.output_risk`) gets a red outline and, expanded, a "⚠ <reason>" note.
 - **Opening and closing:** the body is wrapped in `Collapse` (`ui.tsx`), so it slides open and closed in 180 ms (see Motion in 3.20). After a tap that closes it, the body stays mounted until the animation ends.
 - **Expanded body**, in order: Arguments (JSON; the noisy file body and replaced strings are left out when a diff is shown), Summary, Diff (Hermes's inline diff, or a diff built from the `memory` tool's arguments, or a diff found in the result), any image / video / audio path or URL found in the output (drawn with `Media`), Output (readable part of a JSON result, with `exit N` and error in the caption, a Copy button, cut at 20,000 characters).
-- **Stored output.** A tool card restored from history has no result text. When opened, the card fetches it from the plugin (`GET /tool-result?id=<tool call id>`), shows "Loading output…", caches it, and says "No output recorded" if there is none. Cards with a locally made id are not fetched.
-- **Folding.** `web/src/fold.ts` `toolRuns` finds runs of at least three tool cards with only tool cards and reasoning-only replies between them. A closed run is one line (`ToolRunHead`): up to four tool icons, a useful action summary such as "Read 3 files · Ran 8 commands", the duration and tool count, " · N failed" when some failed, a spinner while one runs, and a chevron. Raw tool names, arguments and output stay in the Activity details panel. Tap toggles the run (keyed by its first item's id). A run still working keeps its last card visible. Every item keeps its own element in the list, folded ones as empty placeholders, so message search can find them by position.
+- **Stored output.** A tool activity restored from history has no result text. When opened from the Activity panel, it fetches the output from the plugin (`GET /tool-result?id=<tool call id>`), shows "Loading output…", caches it, and says "No output recorded" if there is none. Items with a locally made id are not fetched.
+- **Folding.** `web/src/fold.ts` `toolRuns` finds runs of at least three tool calls with only tool calls and reasoning-only replies between them. A folded run is one borderless line (`ToolRunHead`) with a useful summary such as "Read 3 files · Ran 8 commands", duration and count, failure count and current running state. Raw tool names, arguments and output stay in the Activity panel. Tapping the line opens details; the chat never expands tool cards inline. Every item keeps its own element in the list so message search can find it by position.
 
-#### Sub-agent card
+#### Sub-agent activity
 
-`SubagentView`: "⇶ Sub-agent" and its status (`running`, `done`…), the goal, the latest detail while it is not done, and the summary when finished. Created and updated by the `subagent.*` events.
+`SubagentView` is a borderless transcript line: the goal, latest detail while running, final summary when done, and a
+textual status. It is not rendered as a card and is created/updated by the `subagent.*` events.
 
 #### Notice
 
@@ -127,10 +131,10 @@ Events from Hermes (`client.onEvent` in `gateway.ts`) reach the chat for the ope
 - `message.start`: the turn starts; `running` is set, the status reads "Thinking…", and `turnStart` is set if the send didn't already (Hermes may send several per turn).
 - `session.control.update`: the chat's goal changed (`control.goal`); the goal line follows it.
 - `thinking.delta` / `status.update`: the status-bar text. A `status.update` that `quietStatus` (`quietstatus.ts`) matches is dropped: Hermes's "⚠ Auxiliary title generation failed: …" warning when the provider is busy (usually the title model's HTTP 429) would replace "Working…" for the rest of the turn, while the chat keeps the title it has and Hermes asks again on a later turn (Hermes patch 0004, 6.4).
-- `reasoning.delta`, `message.delta`: appended to the open assistant item in batches (every 60 ms, every 150 ms once the reply is over 6000 characters), not per token, because every change reparses Markdown. Any other event flushes the batch first, so order never changes.
-- `tool.generating`, `tool.start`, `tool.complete`: the tool card appears when the call starts being written, becomes `running` at `tool.start`, `done` at `tool.complete`. The status line changes to a concise action label at each transition, then to "Reviewing results…" when a tool completes; it describes observed phases, not hidden model reasoning. A tool that streams under a generic name takes its real name at start. A replayed start for a card that already exists adds no second card. Starting a tool closes the open assistant segment, so text after tools is a new segment.
+- `reasoning.delta`, `message.delta`: appended to the open assistant item in batches (every 60 ms, every 150 ms once the reply is over 6000 characters), not per token, because every change reparses Markdown. `reasoning.available` appends Hermes's completed fallback preview only when no streamed reasoning is already present. Any other event flushes the batch first, so order never changes.
+- `tool.generating`, `tool.start`, `tool.complete`: the activity line appears when the call starts being written, becomes `running` at `tool.start`, `done` at `tool.complete`. The status line changes to a concise action label at each transition, then to "Reviewing results…" when a tool completes; it describes observed phases, not hidden model reasoning. A tool that streams under a generic name takes its real name at start. A replayed start for an item that already exists adds no duplicate. Starting a tool closes the open assistant segment, so text after tools is a new segment.
 - `todo.updated`, `session.usage` (also refreshes `ctx` without an RPC when the usage has `context_max` and `context_used`), `session.info`, `session.title`.
-- `message.complete`: tool cards still "generating" are dropped; errors become a notice; the final text fills a reply whose stream missed some (`fullReply`); the turn stats are computed (`finishTurnStats`, given the turn's seconds read before `turnStart` is cleared); `running` ends. Live mode and automatic read-aloud (Settings or chat menu, when the app is on screen) speak the reply here.
+- `message.complete`: tool items still "generating" are dropped; errors become a notice; the final text fills a reply whose stream missed some (`fullReply`); the turn stats are computed (`finishTurnStats`, given the turn's seconds read before `turnStart` is cleared); `running` ends. Live mode and automatic read-aloud (Settings or chat menu, when the app is on screen) speak the reply here.
 - `review.summary`, `btw.complete`, `background.complete`: notices.
 - A silent connection is checked: every 15 s `gateway.ping`; after 45 s without any event during a turn the page asks `session.resume` whether the turn is still running and loads the stored transcript if it finished meanwhile.
 

@@ -97,6 +97,34 @@ describe('a whole turn (the "read the note" flow)', () => {
     expect(shape()).toEqual([{ kind: 'assistant', text: 'all at once', reasoning: '', streaming: false }])
   })
 
+  test('a non-streamed reasoning preview emitted as reasoning.available reaches the live assistant message', () => {
+    emit('message.start')
+    emit('reasoning.available', { text: 'Checking the requested change before replying.' })
+    vi.advanceTimersByTime(100)
+    expect(items()).toEqual([expect.objectContaining({
+      kind: 'assistant',
+      reasoning: 'Checking the requested change before replying.',
+      streaming: true
+    })])
+  })
+
+  test('reasoning.available does not duplicate reasoning that was already streamed', () => {
+    emit('message.start')
+    emit('reasoning.delta', { text: 'Already streamed.' })
+    vi.advanceTimersByTime(100)
+    emit('reasoning.available', { text: 'fallback reasoning that would duplicate it' })
+    vi.advanceTimersByTime(100)
+    expect(items().filter(i => i.kind === 'assistant').map(i => i.kind === 'assistant' ? i.reasoning : '')).toEqual(['Already streamed.'])
+  })
+
+  test('meaningful status updates are preserved as chat progress items', () => {
+    emit('message.start')
+    emit('status.update', { kind: 'process', text: 'Read 2 project files' })
+    expect(items()).toContainEqual(expect.objectContaining({
+      kind: 'notice', id: expect.stringMatching(/^progress-/), text: 'Read 2 project files'
+    }))
+  })
+
   test('an empty assistant segment closed by a tool leaves no item', () => {
     emit('message.start')
     emit('tool.start', { tool_id: 'call_2', name: 'terminal' })

@@ -198,6 +198,7 @@ module.exports = async t => {
   check((await page.locator('.tool-details-panel').count()) === 1, 'tap opens activity details')
   check((await visibleCards()) === 4, `activity details shows all four (${await visibleCards()})`)
   await page.getByRole('button', { name: 'Close activity details' }).click()
+  await page.locator('.tool-details-panel').waitFor({ state: 'detached', timeout: 3000 })
   check((await visibleCards()) === 0, 'closing activity details keeps the run folded')
 
   // ── activity details keeps tool bodies inspectable and lets them collapse ──
@@ -208,6 +209,7 @@ module.exports = async t => {
   await card0.locator('.tool-head').click()
   await card0.locator('.tool-body').waitFor({ state: 'detached', timeout: 3000 }).then(() => check(true, 'activity details collapses a tool body'), () => check(false, 'activity details collapses a tool body'))
   await page.getByRole('button', { name: 'Close activity details' }).click()
+  await page.locator('.tool-details-panel').waitFor({ state: 'detached', timeout: 3000 })
 
   check((await page.locator('.turn-changes').count()) === 0, 'a turn with only terminal tools has no changes card')
 
@@ -216,15 +218,21 @@ module.exports = async t => {
   await page.getByPlaceholder('Message Hermes').fill('read the note')
   await page.locator('.composer').getByRole('button', { name: 'Send' }).click()
   await page.locator('.msg.assistant', { hasText: 'The note says: contract note. Nothing else to report.' }).waitFor({ timeout: 5000 })
-  const noteRun = page.locator('.tool-run').last()
-  await noteRun.waitFor({ timeout: 5000 })
-  await noteRun.click()
+  const streamedReasoning = page.locator('.reasoning-peek').filter({ hasText: 'Let me read' })
+  await streamedReasoning.waitFor({ timeout: 3000 })
+  check((await streamedReasoning.count()) > 0, 'provider reasoning remains visible after the turn completes')
+  const noteActivity = page.locator('.tool-activity').last()
+  await noteActivity.waitFor({ timeout: 5000 })
+  check((await noteActivity.innerText()).includes('Read note.txt'), 'the tool is a useful, borderless activity line')
+  check(await page.locator('.chat .tool').count() === 0, 'tool details are not rendered as cards inside chat')
+  await noteActivity.click()
   const noteTool = page.locator('.tool-details-panel .tool', { hasText: 'read_file' }).last()
-  check((await noteTool.count()) === 1, 'real-shaped turn: the read_file call shows as a tool card')
-  check((await noteTool.locator('.tool-body').count()) === 1, 'real-shaped turn: the card body is visible in activity details')
+  check((await noteTool.count()) === 1, 'real-shaped turn: read_file details open in the Activity panel')
+  check((await noteTool.locator('.tool-body').count()) === 1, 'tool details are visible in the Activity panel')
   await noteTool.locator('.tool-head').click()
   await sleep(400)
   await page.getByRole('button', { name: 'Close activity details' }).click()
+  await page.locator('.tool-details-panel').waitFor({ state: 'detached', timeout: 3000 })
 
   // ── a turn that wrote files ends with a card listing them; tap a file for its diff ──
   await page.getByPlaceholder('Message Hermes').fill('edit files')
@@ -304,6 +312,12 @@ module.exports = async t => {
           toolOutputOpened = true
         }
       }
+    }
+    // Tool output is inspected in the Activity overlay; dismiss it before checking links in the chat transcript.
+    const activityClose = page.getByRole('button', { name: 'Close activity details' })
+    if (await activityClose.count() && await activityClose.isVisible().catch(() => false)) {
+      await activityClose.click()
+      await page.locator('.tool-details-panel').waitFor({ state: 'detached', timeout: 3000 })
     }
     const code = page.locator('.msg.assistant a.code-link code', { hasText: 'https://example.com/c' })
     check((await code.count()) === 1, 'a web address in inline code is a link')
