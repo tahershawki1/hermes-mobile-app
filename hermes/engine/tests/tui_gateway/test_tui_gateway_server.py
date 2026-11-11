@@ -13876,6 +13876,36 @@ def test_interrupt_only_clears_own_session_pending():
         server_requests.reset_for_tests()
 
 
+def test_stop_signals_agent_before_slow_observer_hook(monkeypatch):
+    """A slow observer hook must not keep the live agent running after Stop."""
+    import hermes_cli.plugins
+
+    agent_stopped = threading.Event()
+    hook_started = threading.Event()
+    release_hook = threading.Event()
+    session = _session(
+        agent=types.SimpleNamespace(hard_interrupt=agent_stopped.set),
+        running=True,
+    )
+    monkeypatch.setattr(server, "_session_profile_runtime_scope", lambda *a, **k: contextlib.nullcontext())
+
+    def slow_hook(*_args, **_kwargs):
+        hook_started.set()
+        assert release_hook.wait(3)
+
+    monkeypatch.setattr(hermes_cli.plugins, "invoke_hook", slow_hook)
+    stopper = threading.Thread(target=server._interrupt_session_turn, args=("sid", session))
+    stopper.start()
+    try:
+        assert agent_stopped.wait(1), "the agent should be signalled immediately"
+        assert hook_started.wait(1), "the observer hook should still run after signalling"
+        assert stopper.is_alive(), "the intentionally blocked hook must not undo the delivered stop"
+    finally:
+        release_hook.set()
+        stopper.join(timeout=2)
+    assert not stopper.is_alive()
+
+
 def _wake_lease_double():
     """Owner-gated pause/resume stand-in: only the lease holder can re-arm."""
     from tools import wake_word

@@ -84,7 +84,7 @@ module.exports = async t => {
     await page.locator('.status-line').waitFor({ timeout: 3000 })
     await sleep(600) // the warning arrives 200 ms into the turn
     const shown = await page.locator('.status-text').innerText().catch(() => '')
-    check(shown === 'Working…', `the status line keeps "Working…" while the title warning arrives (${JSON.stringify(shown)})`)
+    check(shown === 'Thinking…', `the status line keeps "Thinking…" while the title warning arrives (${JSON.stringify(shown)})`)
     await page.locator('.msg.assistant', { hasText: 'Busy done.' }).waitFor({ timeout: 5000 })
     check((await page.getByText('Auxiliary title generation failed').count()) === 0, 'the title failure is shown nowhere in the chat')
   }

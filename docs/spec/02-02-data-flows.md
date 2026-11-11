@@ -16,6 +16,9 @@ Each flow lists the steps in the order the code runs them. "Page" = the WebView 
    then `command.dispatch`, and follows its `type` (`exec`, `alias` up to depth 3, `send`, `skill`, `prefill`).
 5. If the chat is running, the text steers the running turn (`session.steer`) and a "Steer: …" notice is added.
    A follow-up typed while the chat runs can also wait in the page's queue instead (`queue.ts`, 3.4): see step 8a.
+   Stop stays available beside Steer and Queue even when the composer contains a draft; it sends
+   `session.interrupt` for the active runtime. Hermes signals the agent before invoking the
+   `agent_loop_stopped` observer hook so a slow plugin cannot delay cancellation.
 6. Otherwise the page adds the user bubble at once (with photo previews, image paths, file names and their
    `@file:` refs), sets `running: true`, clears the attachments, waits for a model switch in flight
    (`switching`), and calls `prompt.submit` with `surface: 'mobile'`. Files travel as their `@file:` references in

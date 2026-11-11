@@ -603,6 +603,9 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
           </button>
         ) : running ? (
           <Fragment key="run">
+            <button className="send stop" aria-label="Stop" title="Stop the running task" onClick={() => { haptic(); void interrupt() }}>
+              <span className="stop-square" />
+            </button>
             <button className="send steer" aria-label="Steer" title="Send into the running task now" onClick={() => void send()} disabled={busy || !!opening}>
               Steer
             </button>
