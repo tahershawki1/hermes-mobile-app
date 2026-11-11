@@ -1,0 +1,1 @@
+- **Stop a running task.** The chat Stop control remains available while a follow-up message is being drafted. On the backend, cancellation is sent to the running agent before the `agent_loop_stopped` observer hook runs, so a slow plugin cannot hold the task open after Stop is pressed.

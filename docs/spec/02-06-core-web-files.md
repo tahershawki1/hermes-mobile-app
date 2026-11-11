@@ -83,7 +83,7 @@ All go through `rpc` in `gateway.ts`, which adds `profile`. "Used by" = file and
 | `session.history` | `gateway.ts` `userRowId` | Stored rows, to find a user message's row id for edit/retry/stats. |
 | `session.control` | `gateway.ts` `goalAction` | Goal sheet buttons: `goal.pause`, `goal.resume`, `goal.clear`; the goal is re-read afterwards. |
 | `session.control.read` | `gateway.ts` `loadGoal` | After a chat is created or opened, from the `goal` chat-open step (not awaited, errors ignored): the chat's goal for the goal line. |
-| `session.interrupt` | `gateway.ts` `interrupt` | Stop the running turn. |
+| `session.interrupt` | `gateway.ts` `interrupt`; `Composer.tsx` Stop button | Stop the running turn, including while a follow-up draft is in the composer. |
 | `session.list` | `gateway.ts` `loadSessions`, `loadArchived` | Drawer list (limit 80, +100 per Show more); archived = `include_hidden` list minus the normal list (limit 200 each). |
 | `session.resume` | `gateway.ts` `resumeSession`, `syncRunning` | Open a stored chat (60 s timeout; `inflight` adds a live turn); check whether a turn is still running (20 s). |
 | `session.set_hidden` | `gateway.ts` `setArchived` | Archive / unarchive (Hermes's hidden flag, as Desktop). |

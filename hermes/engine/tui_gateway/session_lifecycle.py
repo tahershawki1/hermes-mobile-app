@@ -651,22 +651,6 @@ def _interrupt_session_turn(sid: str, session: dict, *, request_id: str | None =
         session["queued_prompt"] = None
         session.pop("queued_prompts", None)
         session["_queued_prompt_generation"] = int(session.get("_queued_prompt_generation", 0)) + 1
-    if should_interrupt:
-        # Sibling of gateway/run_agent_cache.py::_interrupt_and_clear_session: a user-initiated stop of a
-        # live TUI/desktop turn is the same "loop is gone" event for plugins holding per-turn external
-        # resources. Observer-only; dispatch failures never break the interrupt.
-        # Every caller (session.interrupt RPC, orphan/idle reapers, lease takeover) is off-turn, so bind the
-        # SESSION's profile as _finalize_session does or an observer's get_hermes_home() names the launch
-        # profile (#125063). hydrate_secrets=False: observer-only, /stop must stay fast.
-        try:
-            from hermes_cli.plugins import invoke_hook as _invoke_hook
-            with _session_profile_runtime_scope(session, hydrate_secrets=False):
-                _invoke_hook(
-                    "agent_loop_stopped", session_key=session.get("session_key", ""), platform="tui",
-                    reason="user_stop", invalidation_reason="session_interrupt",
-                )
-        except Exception:
-            logger.debug("agent_loop_stopped hook dispatch failed", exc_info=True)
     if not use_compute_host:
         if should_interrupt:
             from agent.interrupt_compat import request_hard_interrupt
@@ -679,6 +663,21 @@ def _interrupt_session_turn(sid: str, session: dict, *, request_id: str | None =
             interrupt_for_session(
                 origin_ui_session_id=_lifecycle_own_sid(session, sid), reason="user_stop",
                 parent_session_id=str(getattr(session.get("agent"), "session_id", "") or ""))
+    if should_interrupt:
+        # Signal the agent before invoking observer hooks: a slow plugin must not keep
+        # the model/tools running after the user has pressed Stop. The hook still runs
+        # for the same live-turn transition, but only after cancellation is published.
+        # Every caller is off-turn, so bind the session's profile here rather than using
+        # the launch profile; secrets are unnecessary for this observer-only hook.
+        try:
+            from hermes_cli.plugins import invoke_hook as _invoke_hook
+            with _session_profile_runtime_scope(session, hydrate_secrets=False):
+                _invoke_hook(
+                    "agent_loop_stopped", session_key=session.get("session_key", ""), platform="tui",
+                    reason="user_stop", invalidation_reason="session_interrupt",
+                )
+        except Exception:
+            logger.debug("agent_loop_stopped hook dispatch failed", exc_info=True)
         if not run_thread_alive:
             with session["history_lock"]:
                 if session.get("running"):
