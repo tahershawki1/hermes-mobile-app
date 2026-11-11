@@ -1,0 +1,1 @@
+- **Open the model picker without waiting after restarting the app.** Hermes Mobile keeps the last model catalog on the device and still refreshes it after provider changes or when its live refresh is due. Tested: web unit checks; real-phone verification pending.
