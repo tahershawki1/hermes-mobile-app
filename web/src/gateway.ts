@@ -1472,6 +1472,17 @@ client.onEvent((ev: GatewayEvent) => {
     case 'message.delta':
       queueDelta('text', String(payload.text || ''))
       break
+    case 'message.interim': {
+      // This is a real assistant segment boundary, not the end of the turn.
+      // Non-delta dispatch already flushed queued text before reaching here.
+      const text = typeof payload.text === 'string' ? payload.text : ''
+      if (!payload.already_streamed && text.trim()) {
+        const id = openAssistant()
+        patchItem(id, it => it.kind === 'assistant' ? { ...it, text } : it)
+      }
+      closeAssistant()
+      break
+    }
     case 'tool.generating': {
       closeAssistant()
       const name = String(payload.name || 'tool')
@@ -1581,6 +1592,8 @@ client.onEvent((ev: GatewayEvent) => {
       break
     case 'message.complete': {
       const p = payload as MessageCompletePayload
+      // Capture before removing generating tools: even a discarded tool is a segment boundary.
+      const previous = getState().active?.items.at(-1)
       updateActive(a => ({ items: a.items.filter(i => !(i.kind === 'tool' && i.status === 'generating')) }))
       canvasWritingDone()
       const openId = getState().active?.openAssistantId
@@ -1589,10 +1602,18 @@ client.onEvent((ev: GatewayEvent) => {
       } else if (openId) {
         const finalText = typeof p.text === 'string' ? p.text : ''
         patchItem(openId, it =>
-          it.kind === 'assistant' ? { ...it, text: fullReply(openId, it.text, finalText), warning: p.warning || undefined } : it
+          it.kind === 'assistant' ? { ...it, text: p.response_transformed ? finalText : fullReply(openId, it.text, finalText), warning: p.warning || undefined } : it
         )
-      } else if (typeof p.text === 'string' && p.text.trim()) {
-        pushItem({ kind: 'assistant', id: newId('a'), text: p.text, reasoning: p.reasoning || '', streaming: false })
+      } else if (typeof p.text === 'string' && (p.text.trim() ||
+                 (p.response_transformed && p.response_previewed && previous?.kind === 'assistant'))) {
+        const finalText = p.text
+        // Reconcile only the adjacent preview, never commentary across tool/subagent/user boundaries.
+        if (p.response_previewed && previous?.kind === 'assistant' &&
+            (p.response_transformed || previous.text.trim() === finalText.trim())) {
+          patchItem(previous.id, it => it.kind === 'assistant' ? { ...it, text: finalText, warning: p.warning || undefined } : it)
+        } else {
+          pushItem({ kind: 'assistant', id: newId('a'), text: p.text, reasoning: p.reasoning || '', streaming: false })
+        }
       }
       const lastId = lastAssistantId()
       closeAssistant()

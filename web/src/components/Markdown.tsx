@@ -634,10 +634,11 @@ function mdComponents(seed: { current: string }, nextBox: { current: number }): 
       ) : (
         <li dir={dir} className={className}>{children}</li>
       ),
-    code: ({ className, children }) => {
+    code: ({ className, children, dir }) => {
       // Inline code that is just a web address opens it (fenced blocks end in a newline and stay plain, for copying).
       const url = !className && typeof children === 'string' && /^https?:\/\/\S+$/.test(children) ? children : ''
-      if (!url) return <code className={className}>{children}</code>
+      // CSS direction alone is not used by an ancestor's HTML dir=auto scan.
+      if (!url) return <code dir={dir} className={className}>{children}</code>
       return (
         <a
           dir="auto"
@@ -649,7 +650,7 @@ function mdComponents(seed: { current: string }, nextBox: { current: number }): 
             openExternal(url)
           }}
         >
-          <code>{children}</code>
+          <code dir={dir}>{children}</code>
         </a>
       )
     },
