@@ -1161,6 +1161,32 @@ textarea {
   padding: 3px 6px;
 }
 
+/* CAD launcher for the empty/new-chat composer. It stays above the composer so the entry point remains visible without changing the existing attachment flow. */
+.cad-tools-launcher {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 2px 8px;
+}
+.cad-tools-launcher button {
+  min-height: 38px;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+.cad-tools-button {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.cad-tools-file-button {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.cad-tools-launcher button:active {
+  transform: translateY(1px);
+}
+
 /* drawer */
 .drawer-backdrop {
   position: fixed;

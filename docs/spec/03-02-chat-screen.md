@@ -58,6 +58,12 @@ Shown when there is no open chat and none is opening (`Empty`).
 - **In-chat search.** `findMatches` lists the items whose text contains the query (case-insensitive), newest first. All hits in drawn messages are marked (`hm-find`), the current one (`hm-hit`) is centred, scrolling only when the query or the chosen match changes. Searched text: user and assistant text, and for tool cards their context and result text.
 - **Scrubber jump.** Letting go on the chat scrubber (3.2) sets `scrubTo` (an item index) in `Chat`: it draws earlier items first when the message is above the window, opens a folded run if needed (`unfold`), scrolls the message to 8 px below the top, and flashes it for 2.5 s: the same steps as the search jump. The thumb follows the scroll (`trackTop`, once per animation frame): each of your messages' `offsetTop` in the list (0 for those above the drawn window) and the line from `readLine` (10 px under the top of the screen, sliding down to the end of the list over the last screenful) give `railPosition`, the position counted in messages (2.5 is half way from your third message to your fourth). `paintRail` writes it to the rail's `--thumb` and `--merge` CSS variables without a re-render: within a quarter of a gap of a tick the thumb is pulled onto it and shrinks into the tick's shape. The whole part of the position is the current message (`aria-valuenow`, ArrowUp/ArrowDown); part way through a reply ArrowUp first goes back to the start of that message. While a finger is on the rail the thumb sits on the picked tick.
 
+#### CAD Tools launcher
+
+On the empty new-chat screen, `Composer` shows a persistent `CAD Tools` launcher above the composer. Tapping `CAD Tools` starts a fresh draft and pre-fills a CAD workspace prompt without sending it. `Open AutoCAD file` opens the phone file picker filtered to `.dwg`, `.dxf`, `.dws` and `.dwt`; selected files use the existing attachment upload path and appear in the attachment row before sending. The Add picker also includes an `AutoCAD file` option for the same filtered picker.
+
+
+
 #### Auto button (composer, beside the model chip)
 
 `web/src/components/AutoAccess.tsx` `AutoButton`. It sits in the composer's model row, right after the model chip (3.4), with the same chip shape (28 px high, rounded). It sets how much Hermes may do in this chat without asking. Three states:
