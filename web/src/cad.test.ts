@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { approveCadMutation, cadWorkspaceKey, getCadWorkspace, requestCadMutation, resetCadWorkspaces, validateCadFile } from './cad'
+import { approveCadMutation, cadWorkspaceKey, getCadWorkspace, rebindCadWorkspace, requestCadMutation, resetCadWorkspaces, validateCadFile } from './cad'
 
 describe('CAD vertical slice', () => {
   it('binds workspace state to profile and storedId while runtimeId remains live-only', () => {
@@ -16,9 +16,20 @@ describe('CAD vertical slice', () => {
     expect(validateCadFile('plan.dws', new TextEncoder().encode('AC1032'))).toMatchObject({ ok: false })
     expect(validateCadFile('plan.dwt', new TextEncoder().encode('AC1032'))).toMatchObject({ ok: false })
     expect(validateCadFile('plan.dwg', new TextEncoder().encode('not dwg'))).toMatchObject({ ok: false })
-    expect(validateCadFile('plan.dxf', new TextEncoder().encode('SECTION\n2\nHEADER\n0\nEOF'))).toMatchObject({ ok: true, kind: 'dxf' })
+    expect(validateCadFile('plan.dxf', new TextEncoder().encode('0\nSECTION\n2\nHEADER\n0\nEOF'))).toMatchObject({ ok: true, kind: 'dxf' })
   })
 
+  it('rebinds a new-chat workspace to the created storedId and clears pending approval', () => {
+    resetCadWorkspaces()
+    const state = getCadWorkspace('p', 'new:p', 'runtime-a')
+    requestCadMutation(state, 'delete')
+    rebindCadWorkspace(state, 'p', 'stored-9', 'runtime-b')
+    expect(state.key).toBe('p:stored-9')
+    expect(state.storedId).toBe('stored-9')
+    expect(state.runtimeId).toBe('runtime-b')
+    expect(state.approval).toBeNull()
+    expect(getCadWorkspace('p', 'stored-9', null)).toBe(state)
+  })
   it('requires a matching, current approval before mutation', () => {
     resetCadWorkspaces()
     const state = getCadWorkspace('p', 'stored-1', 'runtime-a')
@@ -27,4 +38,5 @@ describe('CAD vertical slice', () => {
     expect(approveCadMutation(state, approval)).toBe(true)
     expect(approveCadMutation(state, approval)).toBe(false)
   })
+
 })

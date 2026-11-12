@@ -1051,19 +1051,24 @@ export async function attachFile(file: File): Promise<void> {
   if (nativeUpload) {
     const id = 'hm' + Date.now().toString(36) + Math.random().toString(36).slice(2)
     const size = 256 * 1024
-    for (let offset = 0; offset < file.size; offset += size) {
-      const part = await readDataUrl(new File([file.slice(offset, offset + size)], 'chunk'))
-      const answer = window.HermesAndroid!.uploadChunk!(id, offset, part.split(',')[1] || '')
-      if (answer !== 'ok') throw new Error('Upload failed: ' + answer)
-    }
-    const answer = window.HermesAndroid!.finishUpload!(id, file.name || 'file', file.size)
-    const uploaded = JSON.parse(answer) as { path?: string; error?: string }
-    if (!uploaded.path) throw new Error(uploaded.error || 'Upload failed')
-    if (file.type.startsWith('image/')) {
-      await rpc('image.attach', { session_id: a.runtimeId, path: uploaded.path })
-      att = { kind: 'image', name: file.name || 'image', path: uploaded.path, preview: URL.createObjectURL(file) }
-    } else {
-      att = { kind: 'file', name: file.name || 'file', path: uploaded.path, ref: '@file:' + uploaded.path }
+    try {
+      for (let offset = 0; offset < file.size; offset += size) {
+        const part = await readDataUrl(new File([file.slice(offset, offset + size)], 'chunk'))
+        const answer = window.HermesAndroid!.uploadChunk!(id, offset, part.split(',')[1] || '')
+        if (answer !== 'ok') throw new Error('Upload failed: ' + answer)
+      }
+      const answer = window.HermesAndroid!.finishUpload!(id, file.name || 'file', file.size)
+      const uploaded = JSON.parse(answer) as { path?: string; error?: string }
+      if (!uploaded.path) throw new Error(uploaded.error || 'Upload failed')
+      if (file.type.startsWith('image/')) {
+        await rpc('image.attach', { session_id: a.runtimeId, path: uploaded.path })
+        att = { kind: 'image', name: file.name || 'image', path: uploaded.path, preview: URL.createObjectURL(file) }
+      } else {
+        att = { kind: 'file', name: file.name || 'file', path: uploaded.path, ref: '@file:' + uploaded.path }
+      }
+    } catch (err) {
+      try { window.HermesAndroid!.abortUpload?.(id) } catch { /* cleanup is best effort on older shells */ }
+      throw err
     }
     const runtimeId = a.runtimeId
     updateActive(x => (x.runtimeId === runtimeId ? { attachments: [...x.attachments, att] } : null))
