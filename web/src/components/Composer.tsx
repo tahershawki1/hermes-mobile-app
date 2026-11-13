@@ -45,7 +45,7 @@ const ATTACH_OPTIONS: Option[] = [
 const EFFORT_SHORT: Record<string, string> = { medium: 'med', minimal: 'min', none: 'off' }
 const CAD_PROMPT = 'CAD Tools: افتح مساحة عمل AutoCAD. افحص ملف DWG أو DXF المرفق، حدّد نوع الرسم والوحدات والطبقات، ثم اقترح العملية المطلوبة قبل أي تعديل أو تصدير.'
 const CAD_ATTACH_OPTION: Option = {
-  value: 'cad', label: 'AutoCAD file', sub: 'DWG or DXF (validated before upload)', tone: 'gold',
+  value: 'cad', label: 'CAD drawing', sub: 'DWG or DXF (validated before upload)', tone: 'gold',
   icon: line('M4 19V5h16v14H4zM8 15l2-3 2 2 2-4 2 5M7 8h.01')
 }
 
