@@ -1,3 +1,4 @@
+import CadWorker from './cad.worker?worker&inline'
 import type { Drawing } from '../model/types';
 import type { ExportFormat, ExportResult } from './acadExport';
 
@@ -7,7 +8,7 @@ const pending = new Map<number, { resolve: (v: any) => void; reject: (e: Error) 
 
 function getWorker(): Worker {
   if (!worker) {
-    worker = new Worker(new URL('./cad.worker.ts', import.meta.url), { type: 'module' });
+    worker = new CadWorker();
     worker.onmessage = (ev) => {
       const { id, ok, result, error } = ev.data;
       const p = pending.get(id);

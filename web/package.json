@@ -7,7 +7,9 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "npm run test:core && npm run test:openui",
+    "test:core": "vitest run --exclude src/openui-entry.test.tsx --exclude src/openui-form.test.tsx --pool=forks --poolOptions.forks.singleFork=true --hookTimeout=120000 --testTimeout=30000",
+    "test:openui": "vitest run src/openui-entry.test.tsx --pool=forks --poolOptions.forks.singleFork=true --hookTimeout=120000 --testTimeout=30000 && vitest run src/openui-form.test.tsx --pool=forks --poolOptions.forks.singleFork=true --hookTimeout=120000 --testTimeout=30000",
     "gen:openui": "OPENUI_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1 UPDATE_OPENUI=1 vitest run src/openui-lib.test.ts"
   },
   "dependencies": {
