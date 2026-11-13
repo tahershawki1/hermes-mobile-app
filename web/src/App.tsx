@@ -45,6 +45,7 @@ import { refreshBg } from './bgapp'
 import { bootMark } from './boot'
 import { UninstallResume } from './components/Uninstall'
 import { toggleSide, useSidePanel } from './sidepanel'
+import { CadWorkspace } from './components/CadWorkspace'
 
 declare global {
   interface Window {
@@ -918,6 +919,7 @@ export function App() {
       <BgApp />
       {request?.method === 'approval' && <InlineApproval key={request.id} req={request} />}
       <Composer injected={injected} onInjected={clearInjected} />
+      {screen === 'cad' && <CadWorkspace />}
       {screen === 'skills' && <SkillsScreen onUse={t => setInjected(t)} />}
       {screen === 'memory' && <MemoryScreen />}
       {screen === 'cron' && <CronScreen />}

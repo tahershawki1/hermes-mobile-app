@@ -4186,3 +4186,4 @@ img.inline-frame { display: block; max-width: 100%; max-height: 60vh; margin: 0 
 @media (max-width: 520px) {
   .tool-details-panel { width: 100%; }
 }
+.cad-workspace{position:fixed;inset:0;z-index:20;background:var(--bg);padding:18px;overflow:auto}.cad-workspace .screen-head{display:flex;align-items:center;gap:12px}.cad-workspace h1{flex:1;font-size:20px}.cad-card{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:14px;margin:16px 0;background:var(--panel);border-radius:12px}.cad-workspace label{display:block;margin:18px 0 4px}.cad-workspace label input{display:block;width:100%;margin-top:6px}.cad-actions{margin-top:22px;display:grid;gap:12px}

@@ -38,6 +38,17 @@ class Handler(BaseHTTPRequestHandler):
         TEMP.mkdir(parents=True, exist_ok=True)
         target = TEMP / (ident + ".part")
         with LOCK:
+            if self.path == "/abort":
+                try:
+                    target.unlink()
+                except FileNotFoundError:
+                    pass
+                for finished in ROOT.glob(ident + "-*"):
+                    try:
+                        finished.unlink()
+                    except FileNotFoundError:
+                        pass
+                return self.respond(200, "ok")
             if self.path == "/chunk":
                 actual = target.stat().st_size if target.exists() else 0
                 if offset != actual:

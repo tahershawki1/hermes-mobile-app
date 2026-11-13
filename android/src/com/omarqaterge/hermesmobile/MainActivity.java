@@ -2347,7 +2347,8 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public String uploadChunk(String id, long offset, String base64) {
+        public String uploadChunk(String key, String id, long offset, String base64) {
+            if (!ok(key)) return "bridge denied";
             try {
                 if (base64.length() > 400000) return "chunk too large";
                 byte[] bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT);
@@ -2357,7 +2358,14 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public String finishUpload(String id, String name, long size) {
+        public String abortUpload(String key, String id) {
+            if (!ok(key)) return "bridge denied";
+            return uploadRequest("abort", id, 0, new byte[0], null, 0);
+        }
+
+        @JavascriptInterface
+        public String finishUpload(String key, String id, String name, long size) {
+            if (!ok(key)) return "bridge denied";
             return uploadRequest("finish", id, 0, new byte[0], name, size);
         }
 

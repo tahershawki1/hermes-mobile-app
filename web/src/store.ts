@@ -117,7 +117,7 @@ export interface Ctx {
 
 export type Sheet = null | 'model' | 'commands' | 'session-actions' | 'chat-menu' | 'draft-menu' | 'status' | 'rollback' | 'context'
 
-export type Screen = null | 'chats' | 'skills' | 'memory' | 'cron' | 'files' | 'projects' | 'settings' | 'bots' | 'setup' | 'hub' | 'welcome' | 'gallery'
+export type Screen = null | 'chats' | 'skills' | 'memory' | 'cron' | 'files' | 'projects' | 'settings' | 'bots' | 'setup' | 'hub' | 'welcome' | 'gallery' | 'cad'
 
 export interface Toast {
   id: number

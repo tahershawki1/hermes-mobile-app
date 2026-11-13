@@ -18,6 +18,7 @@ import { AutoButton } from './AutoAccess'
 import { ago } from '../unread'
 import { QUEUE_MAX, enqueue, useQueue } from '../queue'
 import { clearQuotes, removeQuote, setQuotes, useQuotes, withQuotes } from '../quote'
+import { validateCadFile } from '../cad'
 
 const EMPTY: Attachment[] = []
 
@@ -44,7 +45,7 @@ const ATTACH_OPTIONS: Option[] = [
 const EFFORT_SHORT: Record<string, string> = { medium: 'med', minimal: 'min', none: 'off' }
 const CAD_PROMPT = 'CAD Tools: افتح مساحة عمل AutoCAD. افحص ملف DWG أو DXF المرفق، حدّد نوع الرسم والوحدات والطبقات، ثم اقترح العملية المطلوبة قبل أي تعديل أو تصدير.'
 const CAD_ATTACH_OPTION: Option = {
-  value: 'cad', label: 'AutoCAD file', sub: 'DWG, DXF, DWS or DWT', tone: 'gold',
+  value: 'cad', label: 'CAD drawing', sub: 'DWG or DXF (validated before upload)', tone: 'gold',
   icon: line('M4 19V5h16v14H4zM8 15l2-3 2 2 2-4 2 5M7 8h.01')
 }
 
@@ -276,10 +277,15 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
 
   const queued = useStore(s => s.queued)
 
-  const addFiles = async (files: File[]) => {
+  const addFiles = async (files: File[], cad = false) => {
     setAttaching(n => n + files.length)
     for (const f of files) {
       try {
+        if (cad) {
+          const check = validateCadFile(f.name, new Uint8Array(await f.arrayBuffer()))
+          if (!check.ok) throw new Error(`${f.name}: ${check.reason}`)
+          setState({ screen: 'cad' })
+        }
         await attachFile(f)
       } catch (err) {
         toast(errText(err), 'error')
@@ -438,6 +444,7 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
             onClick={() => {
               haptic()
               startDraft()
+              setState({ screen: 'cad' })
               requestAnimationFrame(() => composerPrefill.set(CAD_PROMPT))
             }}
           >
@@ -500,13 +507,13 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
         <input
           ref={cadInput}
           type="file"
-          accept=".dwg,.dxf,.dws,.dwt"
+          accept=".dwg,.dxf"
           multiple
           hidden
           onChange={e => {
             const files = Array.from(e.target.files || [])
             e.target.value = ''
-            void addFiles(files)
+            void addFiles(files, true)
           }}
         />
         {stashMenu && (
