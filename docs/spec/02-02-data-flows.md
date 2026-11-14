@@ -31,6 +31,7 @@ Each flow lists the steps in the order the code runs them. "Page" = the WebView 
    - `reasoning.delta`, `reasoning.available` and `message.delta` are appended to the open reply in batches (`queueDelta` →
      `flushDeltas`, every 60 ms, every 150 ms once the reply is over 6,000 characters). Any other event flushes
      first, so order never changes.
+   - `message.interim` seals a real mid-turn assistant segment without ending the turn. When `already_streamed` is false, its full text completes the open segment; when true, the existing streamed segment is sealed without appending a duplicate. Pending deltas flush before this boundary.
    - `tool.generating` closes the open reply and adds a generating activity line; `tool.start` turns it into a
      running line (or adds one; a replayed start for an item already shown adds nothing); `tool.complete` fills in
      args, duration, summary, result text and inline diff; `tool.output_risk` flags the item. Canvas tool events
@@ -38,7 +39,7 @@ Each flow lists the steps in the order the code runs them. "Page" = the WebView 
    - `subagent.start|progress|thinking|tool|complete` keep one activity line per sub-agent; `todo.updated` sets the task
      list; `session.usage` and `session.info` update the chat (usage that carries `context_max` and `context_used` also updates `ctx` through `refreshCtx`, so the context ring moves during a long turn); `session.title` renames it.
    - `message.complete` drops leftover generating cards, puts the final text on the reply (`fullReply` keeps the
-     streamed text unless the final one is longer and ends with it), adds an error notice on failure, hands the
+     streamed text unless the final one is longer and ends with it; `response_transformed` instead makes the final authoritative, even when shorter or empty). With no open segment, a `response_previewed` final reconciles the immediately adjacent assistant preview when text-equal or transformed, including an empty transformed final. It never searches backward across tool, subagent or user boundaries; generating-tool placeholders count as boundaries even when removed. It adds an error notice on failure, hands the
      reply to Live mode or to auto read-aloud (only while the app is in front), sets `running: false`, and
      `finishTurnStats` writes "~N tok/s · 1m 23s · ctx N% · used/max" under the reply (the turn's duration, from 1 s on) and saves it in `hm.stats.v1`.
    - `review.summary`, `background.complete` and an unclaimed `btw.complete` become info notices.

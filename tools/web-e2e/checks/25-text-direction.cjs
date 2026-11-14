@@ -6,7 +6,7 @@ module.exports = async ({ browser }) => {
   const errors = []
   pg.on('pageerror', e => errors.push(e.message))
   await pg.addInitScript(nativeShell)
-  const answer = 'قبل **Hermes** بعد\n\nHello world\n\n- عنصر عربي\n- English item\n\n- [ ] مهمة عربية\n- [x] English task\n\n| الاسم | Name |\n| --- | --- |\n| عربي | English |\n\nافتح [الموقع](https://example.com) الآن\n\n```js\nconst name = "عربي"\n```'
+  const answer = 'قبل **Hermes** بعد\n\nHello world\n\n- عنصر عربي\n- English item\n\n- [ ] مهمة عربية\n- [x] English task\n\n| الاسم | Name |\n| --- | --- |\n| عربي | English |\n\nافتح [الموقع](https://example.com) الآن\n\n```js\nconst name = "عربي"\n```\n\n`Hermes` ده نص عربي يبدأ بكود\n\n> `API` هذا اقتباس عربي'
   // Exercise the real gateway/rendering pipeline with controlled multilingual reply content.
   await pg.routeWebSocket('**/api/ws*', socket => {
     const server = socket.connectToServer()
@@ -56,6 +56,10 @@ module.exports = async ({ browser }) => {
   check(await md.locator('td').first().evaluate(e => getComputedStyle(e).direction) === 'rtl', 'direction: Arabic table cell aligns right')
   check(await md.locator('a').first().evaluate(e => getComputedStyle(e).unicodeBidi) === 'isolate', 'direction: links are isolated')
   check(await md.locator('pre').evaluate(e => getComputedStyle(e).direction) === 'ltr', 'direction: code remains left-to-right')
+  const leadingCode = md.locator('p', { hasText: 'Hermes ده نص عربي يبدأ بكود' })
+  check(await leadingCode.evaluate(e => getComputedStyle(e).direction) === 'rtl', 'direction: English inline code does not set Arabic paragraph direction')
+  check(await leadingCode.locator('code').getAttribute('dir') === 'ltr', 'direction: renderer preserves code dir attribute, not CSS alone')
+  check(await md.locator('blockquote p').evaluate(e => getComputedStyle(e).direction) === 'rtl', 'direction: Arabic quotation and its parent agree after inline code')
   const setDirection = async label => {
     await pg.getByRole('button', { name: /^Sessions/ }).click()
     await pg.locator('.nav-tile', { hasText: 'Settings' }).click()

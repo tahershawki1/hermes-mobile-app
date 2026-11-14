@@ -91,6 +91,105 @@ describe('a whole turn (the "read the note" flow)', () => {
     expect(shape()).toEqual([{ kind: 'assistant', text: 'quick', reasoning: '', streaming: false }])
   })
 
+  test('unstreamed interim commentary is visible before any tool or final reply', () => {
+    emit('message.start')
+    emit('message.interim', { text: 'هراجع الملفات وأرجع لك بالنتيجة.', already_streamed: false })
+    expect(shape()).toEqual([{ kind: 'assistant', text: 'هراجع الملفات وأرجع لك بالنتيجة.', reasoning: '', streaming: false }])
+    expect(getState().active!.running).toBe(true)
+    expect(getState().active!.openAssistantId).toBeNull()
+    emit('tool.start', { tool_id: 'interim-tool', name: 'read_file' })
+    emit('message.delta', { text: 'النتيجة' })
+    emit('message.complete', { text: 'النتيجة', status: 'complete' })
+    expect(items().filter(i => i.kind === 'assistant').map(i => i.text)).toEqual(['هراجع الملفات وأرجع لك بالنتيجة.', 'النتيجة'])
+  })
+
+  test('already-streamed interim commentary is sealed without duplication', () => {
+    emit('message.start')
+    emit('message.delta', { text: 'Checking now.' })
+    emit('message.interim', { text: 'Checking now.', already_streamed: true })
+    expect(shape()).toEqual([{ kind: 'assistant', text: 'Checking now.', reasoning: '', streaming: false }])
+    expect(getState().active!.openAssistantId).toBeNull()
+    emit('message.delta', { text: 'Done.' })
+    emit('message.complete', { text: 'Done.', status: 'complete' })
+    expect(items().filter(i => i.kind === 'assistant').map(i => i.text)).toEqual(['Checking now.', 'Done.'])
+  })
+
+  test('a previewed final is not duplicated after it was sealed as interim', () => {
+    emit('message.start')
+    emit('message.interim', { text: 'Done.', already_streamed: false })
+    emit('message.complete', { text: 'Done.', response_previewed: true, status: 'complete' })
+    expect(items().filter(i => i.kind === 'assistant').map(i => i.text)).toEqual(['Done.'])
+  })
+
+  test('a transformed previewed final replaces its sealed streamed preview', () => {
+    emit('message.start')
+    emit('message.delta', { text: 'Original answer.' })
+    emit('message.interim', { text: 'Original answer.', already_streamed: true })
+    const previewId = items()[0].id
+    emit('message.complete', { text: 'Safe.', response_previewed: true, response_transformed: true, warning: 'Filtered', status: 'complete' })
+    expect(shape()).toEqual([{ kind: 'assistant', text: 'Safe.', reasoning: '', streaming: false }])
+    expect(items()[0]).toMatchObject({ id: previewId, warning: 'Filtered' })
+  })
+
+  test('a previewed final falls back when no preview item exists', () => {
+    emit('message.start')
+    emit('message.complete', { text: 'Done.', response_previewed: true, status: 'complete' })
+    expect(shape()).toEqual([{ kind: 'assistant', text: 'Done.', reasoning: '', streaming: false }])
+  })
+
+  test('a previewed final falls back when no matching current preview is visible', () => {
+    emit('message.start')
+    emit('message.interim', { text: 'Checking now.', already_streamed: false })
+    emit('message.complete', { text: 'Done.', response_previewed: true, status: 'complete' })
+    expect(items().filter(i => i.kind === 'assistant').map(i => i.text)).toEqual(['Checking now.', 'Done.'])
+  })
+
+  test('a previewed final does not match identical text from a previous user turn', () => {
+    open([
+      { kind: 'assistant', id: 'previous-answer', text: 'Done.', reasoning: '', streaming: false },
+      { kind: 'user', id: 'new-prompt', text: 'Again' }
+    ])
+    emit('message.start')
+    emit('message.complete', { text: 'Done.', response_previewed: true, response_transformed: true, status: 'complete' })
+    expect(items().map(i => i.kind)).toEqual(['assistant', 'user', 'assistant'])
+    expect(items().filter(i => i.kind === 'assistant').map(i => i.text)).toEqual(['Done.', 'Done.'])
+  })
+
+  test.each([
+    ['tool.generating', { name: 'read_file' }],
+    ['tool.start', { tool_id: 'boundary-tool', name: 'read_file' }],
+    ['tool.complete', { tool_id: 'boundary-tool', name: 'read_file', result_text: 'read' }],
+    ['subagent.start', { subagent_id: 'boundary-agent', goal: 'Check files' }]
+  ])('a transformed previewed final preserves commentary before %s', (type, payload) => {
+    emit('message.start')
+    emit('message.interim', { text: 'Checking now.', already_streamed: false })
+    emit(type, payload)
+    emit('message.complete', { text: 'Safe.', response_previewed: true, response_transformed: true, status: 'complete' })
+    expect(items().filter(i => i.kind === 'assistant').map(i => i.text)).toEqual(['Checking now.', 'Safe.'])
+  })
+
+  test('a transformed final replaces streamed text even when it is shorter', () => {
+    emit('message.start')
+    emit('message.delta', { text: 'Original untransformed answer.' })
+    emit('message.complete', { text: 'Safe.', response_transformed: true, status: 'complete' })
+    expect(items().filter(i => i.kind === 'assistant').map(i => i.text)).toEqual(['Safe.'])
+  })
+
+  test('an authoritative unstreamed interim completes its partial text in place', () => {
+    emit('message.start')
+    emit('message.delta', { text: 'Checking' })
+    emit('message.interim', { text: 'Checking the files.', already_streamed: false })
+    expect(shape()).toEqual([{ kind: 'assistant', text: 'Checking the files.', reasoning: '', streaming: false }])
+  })
+
+  test('a transformed empty final clears a sealed preview instead of leaving old text', () => {
+    emit('message.start')
+    emit('message.delta', { text: 'Original answer.' })
+    emit('message.interim', { text: 'Original answer.', already_streamed: true })
+    emit('message.complete', { text: '', response_previewed: true, response_transformed: true, status: 'complete' })
+    expect(items().filter(i => i.kind === 'assistant').map(i => i.text).join('')).toBe('')
+  })
+
   test('a reply that only arrives in message.complete is still shown', () => {
     emit('message.start')
     emit('message.complete', { text: 'all at once', status: 'complete' })
