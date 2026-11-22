@@ -181,6 +181,10 @@ module.exports = async t => {
       await page.locator('.model-row', { hasText: 'mock-sonnet' }).first().waitFor({ timeout: 5000 })
     }
     await openModels()
+    check(await page.evaluate(() => {
+      const cached = JSON.parse(localStorage.getItem('hm.modelOptions.v1:chat:default') || 'null')
+      return cached?.data?.providers?.some(p => p.slug === 'mock' && p.models.includes('mock-sonnet'))
+    }), 'model catalog is saved on this device')
     check((await page.locator('.fav-group').count()) === 0, 'no Favourites section before anything is starred')
     check((await page.locator('.effort-row .pill.on').allInnerTexts()).join() === 'high', 'the picker shows the configured default reasoning level, not medium')
     await page.getByRole('button', { name: 'Star mock-sonnet' }).click()
@@ -196,6 +200,10 @@ module.exports = async t => {
     check((await page.locator('.fav-group').count()) === 0, 'search hides favourites that do not match')
     await page.reload()
     await page.getByPlaceholder('Message Hermes').waitFor({ timeout: 15000 })
+    check(await page.evaluate(() => {
+      const cached = JSON.parse(localStorage.getItem('hm.modelOptions.v1:chat:default') || 'null')
+      return cached?.data?.providers?.some(p => p.slug === 'mock' && p.models.includes('mock-sonnet'))
+    }), 'model catalog survives app reload')
     await openModels()
     check((await page.locator('.fav-group .model-row', { hasText: 'mock-sonnet' }).count()) === 1, 'favourite survives a reload')
     await page.locator('.fav-group').getByRole('button', { name: 'Unstar mock-sonnet' }).click()

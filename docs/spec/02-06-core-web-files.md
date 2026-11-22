@@ -20,9 +20,11 @@ These files carry the plumbing every screen uses. Screens are in 3.
   `profile=` unless `profile: false` or the path has one, parses JSON, throws `ApiError` ("Hermes unreachable: …"
   for status 0, the server's `detail` or "HTTP n" for ≥ 400). Also `qs` and `refreshLogins`
   (`POST /refresh-logins`, never throws).
-- `model-options-cache.ts` — one in-memory model catalog per profile for the REST and chat pickers. It deduplicates
-  concurrent catalog loads, allows one live provider refresh every 30 minutes, and invalidates both copies after a
-  key, endpoint or subscription changes, so reopening a picker does not enumerate every provider again.
+- `model-options-cache.ts` — one model catalog per profile for the REST and chat pickers, held in memory and in
+  versioned local storage under `hm.modelOptions.v1` (profile-specific keys use the `hm.modelOptions.v1:` prefix) so it
+  is available immediately after an app restart. It deduplicates
+  concurrent catalog loads, remembers the live-refresh time (30-minute interval), and invalidates both copies after a
+  key, endpoint or subscription changes. If storage is unavailable or full, the in-memory picker still works.
 - `gateway.ts` — the WebSocket client (`JsonRpcGatewayClient`, 120 s request timeout, own heartbeat off) and
   everything about chats: connect/reconnect/liveness, `rpc`, sessions and profiles, open/new/delete/rename/
   archive/branch, send/steer/slash commands, attachments, model and reasoning, access modes, server requests,

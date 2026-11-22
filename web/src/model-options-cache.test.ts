@@ -2,7 +2,17 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { cachedModelOptions, chatModelKey, clearModelOptionsCache, fetchModelOptions, invalidateModelOptions, modelOptionsNeedLiveRefresh, restModelKey } from './model-options-cache'
 
 describe('model options cache', () => {
-  beforeEach(() => clearModelOptionsCache())
+  beforeEach(() => {
+    const values = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      get length() { return values.size },
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+      key: (index: number) => [...values.keys()][index] ?? null,
+    })
+    clearModelOptionsCache()
+  })
 
   test('deduplicates a slow catalog request and keeps its answer', async () => {
     let finish!: (v: { providers: string[] }) => void
@@ -14,6 +24,14 @@ describe('model options cache', () => {
     finish({ providers: ['codex'] })
     await expect(Promise.all([a, b])).resolves.toEqual([{ providers: ['codex'] }, { providers: ['codex'] }])
     expect(cachedModelOptions(key)).toEqual({ providers: ['codex'] })
+  })
+
+  test('restores catalogs across app restarts and preserves the live-refresh age', async () => {
+    const key = restModelKey('default')
+    const answer = { providers: ['codex'] }
+    localStorage.setItem(`hm.modelOptions.v1:${key}`, JSON.stringify({ data: answer, liveAt: Date.now() }))
+    expect(cachedModelOptions(key)).toEqual(answer)
+    expect(modelOptionsNeedLiveRefresh(key)).toBe(false)
   })
 
   test('a live answer suppresses another live refresh inside the TTL', async () => {
