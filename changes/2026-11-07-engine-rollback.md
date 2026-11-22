@@ -1,0 +1,1 @@
+- **Guard engine updates with health-checked rollback.** Phone engine promotions now retain the previous checkout until the restarted Hermes health endpoint reports healthy; failed starts restore the previous engine. CI exercises both paths.

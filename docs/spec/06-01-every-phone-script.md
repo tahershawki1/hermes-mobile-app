@@ -32,6 +32,8 @@ Inputs: `HM_DISTRO=chroot` (rooted phones; stored in `~/.hermes-mobile/distro`),
 10. **STEP start**: runs `~/bin/hermes-services`, waits up to 90 x 4 s for `127.0.0.1:9119`; otherwise `FAIL start`.
 11. Prints each line of `~/.hermes-mobile/todo` as `TODO <text>`. If neither `HM_NO_APK` nor `HM_APP_TOKEN` is set (the phone-only route), downloads `releases/latest/download/hermes-mobile.apk` and opens Android's installer with `termux-open`. Then `say DONE`.
 
+`engine-update.sh` is the guarded engine promotion primitive for an already-installed phone engine: it moves the active checkout to a rollback slot, promotes a staged candidate, optionally runs a restart command, and requires the health URL to return `{\"ok\":true}`. A failed health check restores the previous checkout and restarts it when requested. The `test_engine_rollback.sh` tool covers both the healthy promotion and failed-start restoration paths.
+
 #### `install.sh` in order
 
 Its own five numbered steps (it is also the repair script and runs after Hermes exists):
