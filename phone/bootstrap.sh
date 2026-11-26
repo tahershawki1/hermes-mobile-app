@@ -11,7 +11,10 @@
 set -eE -o pipefail
 # The Hermes this installs = the build the app and hermes/patches are tested against. Bump together with
 # web/vendor/hermes-shared/.hermes-commit and .hermes-version (hermes/README.md; tools/test_bootstrap_pin.sh enforces it in CI).
-HERMES_COMMIT=b8a8be185d6e88b35e0a4fa794fea64fb06ed85b
+HERMES_COMMIT=6fd42bf9d7edcc9031dd3239b13e4781e6ec3ee7
+HERMES_REPO=https://github.com/tahershawki1/hermes-agent.git
+MOBILE_REF=${HM_MOBILE_REF:-main}
+[[ "$MOBILE_REF" == main || "$MOBILE_REF" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid Hermes Mobile source ref" >&2; exit 1; }
 # A ready-made Debian with this Hermes in it (tools/build-image.sh; .github/workflows/image.yml publishes it as release
 # hermes-image-<first 12 of HERMES_COMMIT>): a NEW install downloads it instead of installing Debian and running Hermes's
 # installer here. Found by the pin alone; when there is none for this pin (404) the normal install runs. MB = free space
@@ -95,7 +98,7 @@ fi
 
 # Run from a clone: its own scripts (and plugin); otherwise the latest from GitHub.
 src=$(cd "$(dirname "$0")" 2>/dev/null && pwd) || src=""
-RAW=https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/main
+RAW=https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/$MOBILE_REF
 
 # Phone access early (it is run again by install.sh): rish exists from here on, and the files / Shizuku prompts come while
 # the user is still looking at the phone. Never fails; what is missing goes to ~/.hermes-mobile/todo.
@@ -209,13 +212,15 @@ deb 'find /root/.local/bin -maxdepth 1 -name "hermes*" -type f -size 0 -delete 2
 # (no .git). Hermes's installer then stops at once: "exists and is not a Hermes git checkout. Move it aside". Do that
 # here, like the installer itself does for a clone with no commits: moved aside, never deleted.
 deb 'd=/root/.hermes/hermes-agent; if [ -d "$d" ] && [ ! -L "$d" ] && [ ! -e "$d/.git" ] && [ ! -f "$d/install-stamp.json" ] && [ -n "$(ls -A "$d")" ]; then mv "$d" "$d.broken-$(date -u +%Y%m%d-%H%M%S)"; fi; true'
-if deb "hermes --version 2>/dev/null | grep -q Hermes && test -f /root/.hermes/hermes-agent/install-stamp.json"; then
-  say "hermes already installed, skipping"
+engine=/root/.hermes/hermes-agent
+hermes_source_matches() { deb "hermes --version 2>/dev/null | grep -q Hermes && test -f $engine/install-stamp.json && [ \"\$(git -C $engine remote get-url origin)\" = '$HERMES_REPO' ] && [ \"\$(git -C $engine rev-parse HEAD)\" = '$HERMES_COMMIT' ]"; }
+if hermes_source_matches; then
+  say "Hermes engine already installed ($HERMES_REPO at $HERMES_COMMIT)"
 else
   # The pin's own installer script (not the hosted one), so the install is reproducible: the hosted one changes over time.
   # Downloaded to a file first: piped into bash, a failed download (GitHub answers 429 when busy) ran an empty script and
   # "succeeded". --retry also covers 429/5xx.
-  hermes_install() { deb "HERMES_REPO_URL=https://github.com/tahershawki1/hermes-agent.git curl -fsSL --retry 4 --retry-delay 15 -o /root/hermes-install.sh https://raw.githubusercontent.com/tahershawki1/hermes-agent/$HERMES_COMMIT/scripts/install.sh && HERMES_REPO_URL=https://github.com/tahershawki1/hermes-agent.git bash /root/hermes-install.sh --non-interactive --branch main --commit $HERMES_COMMIT"; }  # hex only: no quotes (deb() wraps this in bash -lc "...")
+  hermes_install() { deb "curl -fsSL --retry 4 --retry-delay 15 -o /root/hermes-install.sh https://raw.githubusercontent.com/tahershawki1/hermes-agent/$HERMES_COMMIT/scripts/install.sh && HERMES_REPO_URL=$HERMES_REPO bash /root/hermes-install.sh --non-interactive --branch main --commit $HERMES_COMMIT"; }  # hex only: no quotes (deb() wraps this in bash -lc "...")
   if ! hermes_install; then
     # Under proot, uv's freshly downloaded Python reports its real Android path as sys.prefix, so
     # `uv python find --managed-python` rejects it and Hermes's installer stops ("bootstrap Python lookup failed").
@@ -225,7 +230,8 @@ else
     hermes_install
   fi
 fi
-deb "hermes --version | grep Hermes"
+hermes_source_matches || { say "FAIL hermes (installed engine does not match the owner source and pin)"; exit 1; }
+say "Hermes engine: $HERMES_REPO at $HERMES_COMMIT"
 # The browser tools are an optional package for Hermes's installer: a failed Chromium download (a CDN outage did this)
 # still ends without an error and without a browser. Try once more here; never fail the setup over it.
 # Hermes keeps agent-browser in its own package store (~/.hermes/tools/agent-browser-<version>-<target>/bin), not on PATH.
@@ -241,7 +247,7 @@ if [ -n "$src" ] && [ -f "$src/install.sh" ] && [ -d "$src/../hermes-plugin/herm
   HM_NO_APK=1 bash "$src/install.sh"
 else
   curl -fsSL --retry 4 --retry-delay 15 "$RAW/phone/install.sh" -o "$HOME/hm-install.sh"
-  HM_NO_APK=1 bash "$HOME/hm-install.sh"
+  HM_MOBILE_REF="$MOBILE_REF" HM_NO_APK=1 bash "$HOME/hm-install.sh"
 fi
 # Termux:Boot (if installed) starts Hermes after a reboot.
 mkdir -p "$HOME/.termux/boot"
