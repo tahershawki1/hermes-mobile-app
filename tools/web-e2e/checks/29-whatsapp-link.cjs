@@ -18,6 +18,7 @@ module.exports = async ({ browser }) => {
   check(await whatsapp.getByText('Enable WhatsApp? (true/false)').count() === 0, 'raw WhatsApp engine settings stay out of the simple linking screen')
   check(await whatsapp.getByRole('button', { name: 'Turn on' }).count() === 0, 'linking a phone does not require a separate channel toggle')
   await whatsapp.getByRole('button', { name: 'Link by phone' }).click()
+  await whatsapp.getByText(/Preparing the WhatsApp bridge/i).waitFor()
   await whatsapp.getByText('ABCD-1234', { exact: true }).waitFor()
   check(true, 'WhatsApp pairing code is requested for the entered phone number')
   await whatsapp.getByText(/enter this code/i).waitFor()
