@@ -13,6 +13,7 @@ module.exports = async ({ browser }) => {
 
   const whatsapp = page.locator('.hm-channel-card', { hasText: 'WhatsApp' })
   await whatsapp.getByRole('button', { name: /WhatsApp/ }).click()
+  await whatsapp.getByText(/not an SMS code/i).waitFor()
   await whatsapp.getByPlaceholder('+201234567890').fill('+201001234567')
   check(await whatsapp.getByText('Enable WhatsApp? (true/false)').count() === 0, 'raw WhatsApp engine settings stay out of the simple linking screen')
   check(await whatsapp.getByRole('button', { name: 'Turn on' }).count() === 0, 'linking a phone does not require a separate channel toggle')

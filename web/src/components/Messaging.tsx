@@ -115,6 +115,17 @@ export function MessagingScreen() {
     return () => { active = false; if (timer) window.clearTimeout(timer) }
   }, [whatsapp?.pairing_id, whatsapp?.status])
 
+  useEffect(() => {
+    const session = whatsapp
+    if (!session || !['starting', 'waiting'].includes(session.status) || session.pairing_code) return
+    const timer = window.setTimeout(() => {
+      setWhatsApp(current => current?.pairing_id === session.pairing_id && !current.pairing_code
+        ? { ...current, status: 'error', error: navigationText('Hermes did not receive a link code. Check the phone number and internet connection, then try again.', 'لم يصل رمز الربط من المحرك. راجع رقم الهاتف والإنترنت ثم حاول مرة أخرى.') }
+        : current)
+    }, 30000)
+    return () => window.clearTimeout(timer)
+  }, [whatsapp?.pairing_id, whatsapp?.status, whatsapp?.pairing_code])
+
   const startWhatsAppLink = async (resetSession = false) => {
     setBusy('whatsapp-link')
     try {
@@ -292,7 +303,7 @@ export function MessagingScreen() {
                 {platform.id === 'whatsapp' && <section className="hm-whatsapp-link" aria-label={navigationText('Link a WhatsApp phone', 'ربط رقم واتساب')}>
                   <div className="hm-whatsapp-link-head">
                     <strong>{navigationText('Connect WhatsApp', 'ربط واتساب')}</strong>
-                    <p>{navigationText('Enter your WhatsApp number. Hermes will show a code; enter it in WhatsApp to approve the connection.', 'أدخل رقم واتساب. سيعرض هيرمس رمزًا؛ أدخله في تطبيق واتساب لتأكيد الاتصال.')}</p>
+                    <p>{navigationText('Enter your WhatsApp number. This is a device-link code, not an SMS code; enter the code shown here inside WhatsApp to approve the connection.', 'أدخل رقم واتساب. هذا رمز ربط جهاز وليس رسالة SMS؛ أدخل الرمز الذي يظهر هنا داخل واتساب لتأكيد الاتصال.')}</p>
                   </div>
                   {linkedPhone && <div className="hm-whatsapp-phone"><span>{navigationText('Linked phone', 'الهاتف المرتبط')}</span><bdi dir="ltr">{linkedPhone}</bdi></div>}
                   {!whatsapp && <>
@@ -310,9 +321,9 @@ export function MessagingScreen() {
                   </>}
                   {whatsapp && <div className="hm-whatsapp-pairing" role="status">
                     {whatsapp.status === 'waiting' && whatsapp.pairing_code && <div className="hm-whatsapp-code" dir="ltr" aria-label={navigationText('WhatsApp pairing code', 'رمز ربط واتساب')}>{whatsapp.pairing_code}</div>}
-                    {whatsapp.status === 'starting' && <p>{navigationText('Requesting a WhatsApp connection code…', 'جارٍ طلب رمز ربط واتساب…')}</p>}
+                    {whatsapp.status === 'starting' && <p>{navigationText('Asking the Hermes engine for a link code…', 'جارٍ طلب رمز الربط من محرك هيرمس…')}</p>}
                     {whatsapp.status === 'waiting' && whatsapp.pairing_code && <p>{navigationText('In WhatsApp, open Linked devices → Link a device → Link with phone number instead, then enter this code.', 'في واتساب افتح الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف بدلاً من ذلك، ثم أدخل هذا الرمز.')}</p>}
-                    {whatsapp.status === 'waiting' && !whatsapp.pairing_code && <p>{navigationText('Waiting for WhatsApp to provide the connection code…', 'بانتظار رمز الاتصال من واتساب…')}</p>}
+                    {whatsapp.status === 'waiting' && !whatsapp.pairing_code && <p>{navigationText('Waiting for the link code from the Hermes engine…', 'بانتظار رمز الربط من محرك هيرمس…')}</p>}
                     {whatsapp.status === 'connected' && !whatsapp.error && <p className="hm-whatsapp-connected">{navigationText('Code accepted. Saving the connection…', 'تم قبول الرمز. جارٍ حفظ الاتصال…')}</p>}
                     {whatsapp.status === 'connected' && whatsapp.error && <>
                       <p className="hm-channel-error">{whatsapp.error}</p>

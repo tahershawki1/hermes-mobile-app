@@ -11,7 +11,7 @@
 set -eE -o pipefail
 # The Hermes this installs = the build the app and hermes/patches are tested against. Bump together with
 # web/vendor/hermes-shared/.hermes-commit and .hermes-version (hermes/README.md; tools/test_bootstrap_pin.sh enforces it in CI).
-HERMES_COMMIT=d7fea85753a5d9cae1095237e2d00f349d005e3d
+HERMES_COMMIT=0c5549c1e6d87f94928c20dda8c8f921011025c7
 HERMES_REPO=https://github.com/tahershawki1/hermes-agent.git
 MOBILE_REF=${HM_MOBILE_REF:-main}
 [[ "$MOBILE_REF" == main || "$MOBILE_REF" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid Hermes Mobile source ref" >&2; exit 1; }
