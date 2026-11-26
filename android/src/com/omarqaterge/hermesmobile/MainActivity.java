@@ -462,7 +462,7 @@ public class MainActivity extends Activity {
     }
 
     // ── app-first setup: the installer command and its progress ──
-    static final String BOOTSTRAP_URL = "https://raw.githubusercontent.com/omarqaterge/hermes-mobile-app/main/phone/bootstrap.sh";
+    static final String BOOTSTRAP_URL = "https://raw.githubusercontent.com/tahershawki1/hermes-mobile-app/main/phone/bootstrap.sh";
 
     /** The bootstrap URL. Emulator test builds only (android/build.sh HM_TEST_BOOTSTRAP_URL): a URL on the emulator's
      *  host (10.0.2.2) serving a working tree. Release builds have no such resource. */
@@ -470,6 +470,12 @@ public class MainActivity extends Activity {
      *  is "1". Release builds have no such resource, so WebView remote debugging stays off. */
     boolean devtoolsBuild() {
         return DevTools.testBuild(this);
+    }
+
+    String bootstrapRef() {
+        int id = getResources().getIdentifier("hm_bootstrap_ref", "string", getPackageName());
+        String ref = id == 0 ? "" : getString(id);
+        return ref.matches("[0-9a-f]{40}") ? ref : "main";
     }
 
     String bootstrapUrl() {
@@ -481,7 +487,7 @@ public class MainActivity extends Activity {
             }
         } catch (Exception ignored) {
         }
-        return BOOTSTRAP_URL;
+        return BOOTSTRAP_URL.replace("/main/", "/" + bootstrapRef() + "/");
     }
 
     /** A new one-time token (24 random bytes), registered with the service, and the command on the clipboard. */
@@ -491,7 +497,7 @@ public class MainActivity extends Activity {
         StringBuilder t = new StringBuilder();
         for (byte x : r) t.append(String.format("%02x", x));
         HermesService.startSetup(this, t.toString());
-        String cmd = "curl -fsSL " + bootstrapUrl() + " -o hm.sh && HM_APP_TOKEN=" + t + " bash hm.sh";
+        String cmd = "curl -fsSL " + bootstrapUrl() + " -o hm.sh && HM_APP_TOKEN=" + t + " HM_MOBILE_REF=" + bootstrapRef() + " bash hm.sh";
         try {
             ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             ClipData clip = ClipData.newPlainText("Hermes installer", cmd);

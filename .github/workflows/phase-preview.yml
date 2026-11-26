@@ -55,7 +55,7 @@ jobs:
       - name: Build and verify test variant
         run: |
           mkdir -p "$HOME/.android"
-          HM_APP_VARIANT=taher-test HM_SKIP_WEB_BUILD=1 VERSION_NAME="review-${GITHUB_RUN_NUMBER}" VERSION_CODE="$GITHUB_RUN_NUMBER" android/build.sh
+          HM_APP_VARIANT=taher-test HM_BOOTSTRAP_REF="$(git rev-parse HEAD)" HM_SKIP_WEB_BUILD=1 VERSION_NAME="review-${GITHUB_RUN_NUMBER}" VERSION_CODE="$GITHUB_RUN_NUMBER" android/build.sh
           mkdir -p review
           cp android/build/hermes-mobile.apk review/Hermes-Taher-Preview.apk
           git rev-parse HEAD > review/commit.txt

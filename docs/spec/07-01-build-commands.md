@@ -27,3 +27,5 @@ Test-build switch: `HM_DEVTOOLS=1` compiles and links a second resource dir (`bu
 Emulator-only switch: when `HM_TEST_BOOTSTRAP_URL` is set, a string resource `hm_test_bootstrap` is added so the setup flow's installer command fetches that URL instead of `main`'s `bootstrap.sh`; `MainActivity` accepts only `http://10.0.2.2:<port>/…`. Never set for a release.
 
 `HM_APP_VARIANT=taher-test` assigns the side-by-side review package `com.tahershawki.hermesmobile.test` and the launcher label **Hermes Taher Preview**. It uses a local Android signing key unless the environment provides another key. Test the local Hermes integration with a test phone or profile because both Android packages can reach the same Termux environment on a device.
+
+`HM_BOOTSTRAP_REF` accepts a full Git commit SHA in the `taher-test` variant. The resource `hm_bootstrap_ref` sets the preview APK's installer source; the preview workflow sets it to the reviewed commit. `bootstrapRef` uses `main` for a standard build. The copied `setupCommand` exports `HM_MOBILE_REF` so `bootstrap.sh` and `install.sh` load the companion scripts and plugin from the same revision. A preview checkout is temporary.

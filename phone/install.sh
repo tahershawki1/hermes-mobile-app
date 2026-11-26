@@ -27,9 +27,19 @@ here=""
 if [ -z "$here" ] || [ ! -d "$here/hermes-plugin/hermes-mobile" ]; then
   echo "0/5 Getting Hermes Mobile into ~/hermes-mobile"
   command -v git >/dev/null || pkg install -y git
-  if [ -d "$HOME/hermes-mobile/.git" ]; then git -C "$HOME/hermes-mobile" remote set-url origin "$REPO.git" && git -C "$HOME/hermes-mobile" fetch -q origin main && git -C "$HOME/hermes-mobile" checkout -q -B main origin/main
-  else git clone -q --depth 1 --branch main "$REPO.git" "$HOME/hermes-mobile"; fi
-  here="$HOME/hermes-mobile"
+  ref=${HM_MOBILE_REF:-main}
+  [[ "$ref" == main || "$ref" =~ ^[0-9a-f]{40}$ ]] || die "Invalid Hermes Mobile source ref"
+  if [ "$ref" = main ]; then
+    if [ -d "$HOME/hermes-mobile/.git" ]; then git -C "$HOME/hermes-mobile" remote set-url origin "$REPO.git" && git -C "$HOME/hermes-mobile" fetch -q origin main && git -C "$HOME/hermes-mobile" checkout -q -B main origin/main
+    else git clone -q --depth 1 --branch main "$REPO.git" "$HOME/hermes-mobile"; fi
+    here="$HOME/hermes-mobile"
+  else
+    here=$(mktemp -d "$HOME/.hermes-mobile/preview.XXXXXXXX")
+    trap 'rm -rf -- "$here"' EXIT
+    git -C "$here" init -q
+    git -C "$here" fetch -q --depth 1 "$REPO.git" "$ref"
+    git -C "$here" checkout -q --detach FETCH_HEAD
+  fi
 fi
 
 echo "1/5 Letting the app start Hermes (allow-external-apps)"

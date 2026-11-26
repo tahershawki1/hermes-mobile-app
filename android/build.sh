@@ -56,6 +56,16 @@ if [ -n "${HM_TEST_BOOTSTRAP_URL:-}" ]; then
   "$BT/aapt2" compile --dir build/res-test -o build/res-test.zip
   RES_ZIPS+=(build/res-test.zip)
 fi
+# Phase preview: keep the bootstrap and its companion scripts on the APK's source commit.
+if [ -n "${HM_BOOTSTRAP_REF:-}" ]; then
+  [[ "${HM_APP_VARIANT:-}" == taher-test && "$HM_BOOTSTRAP_REF" =~ ^[0-9a-f]{40}$ ]] || {
+    echo "HM_BOOTSTRAP_REF requires the preview variant and a full commit SHA" >&2; exit 1;
+  }
+  mkdir -p build/res-bootstrap/values
+  printf '<resources><string name="hm_bootstrap_ref" translatable="false">%s</string></resources>\n' "$HM_BOOTSTRAP_REF" > build/res-bootstrap/values/bootstrap.xml
+  "$BT/aapt2" compile --dir build/res-bootstrap -o build/res-bootstrap.zip
+  RES_ZIPS+=(build/res-bootstrap.zip)
+fi
 # Test builds only: HM_DEVTOOLS=1 adds the string resource hm_devtools, which MainActivity.devtoolsBuild reads to turn on
 # WebView remote debugging, and "+devtools" on the version name, which makes the page show its warning strip.
 if [ "$DEVTOOLS" = 1 ]; then
