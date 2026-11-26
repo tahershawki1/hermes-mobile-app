@@ -463,8 +463,11 @@ const server = http.createServer((req, res) => {
       const b = JSON.parse(body || '{}')
       whatsappPolls = 0
       whatsappOnboarding = {
-        pairing_id: 'wa-pair-1', status: 'waiting', qr_payload: 'whatsapp-fixture-pairing-payload',
-        expires_at: new Date(Date.now() + 600000).toISOString(), mode: b.mode || 'bot', allowed_users: b.allowed_users || ''
+        pairing_id: 'wa-pair-1', status: 'waiting',
+        qr_payload: b.pairing_method === 'phone' ? null : 'whatsapp-fixture-pairing-payload',
+        pairing_code: b.pairing_method === 'phone' ? 'ABCD-1234' : null,
+        expires_at: new Date(Date.now() + 600000).toISOString(), mode: b.mode || 'bot',
+        pairing_method: b.pairing_method || 'qr', phone_number: b.phone_number || null, allowed_users: b.allowed_users || ''
       }
       return send(whatsappOnboarding)
     }
@@ -472,7 +475,7 @@ const server = http.createServer((req, res) => {
     if (whatsappMatch && req.method === 'GET' && !whatsappMatch[2]) {
       if (!whatsappOnboarding || whatsappMatch[1] !== whatsappOnboarding.pairing_id) return send({ detail: 'WhatsApp setup session was not found' }, 404)
       whatsappPolls++
-      if (whatsappPolls >= 1) Object.assign(whatsappOnboarding, { status: 'connected', qr_payload: null, account_phone: '+201001234567', account_name: 'Fixture Phone' })
+      if (whatsappPolls >= 2) Object.assign(whatsappOnboarding, { status: 'connected', qr_payload: null, pairing_code: null, account_phone: '+201001234567', account_name: 'Fixture Phone' })
       return send(whatsappOnboarding)
     }
     if (whatsappMatch && req.method === 'POST' && whatsappMatch[2]) {

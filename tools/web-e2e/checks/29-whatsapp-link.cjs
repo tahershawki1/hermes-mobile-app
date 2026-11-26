@@ -13,15 +13,17 @@ module.exports = async ({ browser }) => {
 
   const whatsapp = page.locator('.hm-channel-card', { hasText: 'WhatsApp' })
   await whatsapp.getByRole('button', { name: /WhatsApp/ }).click()
+  await whatsapp.getByLabel('WhatsApp phone number with country code').fill('+201001234567')
   await whatsapp.getByRole('button', { name: 'Link WhatsApp phone' }).click()
-  await whatsapp.getByRole('img', { name: 'WhatsApp linking QR code' }).waitFor()
-  check(true, 'WhatsApp pairing starts and displays a QR code generated on-device')
+  await whatsapp.getByText('ABCD-1234', { exact: true }).waitFor()
+  check(true, 'WhatsApp pairing code is requested for the entered phone number')
+  await whatsapp.getByText(/Link with phone number instead/).waitFor()
 
   await whatsapp.getByText('+201001234567', { exact: true }).first().waitFor({ timeout: 5000 })
   check(true, 'the linked phone number is shown after the pairing status reports connected')
   await whatsapp.getByRole('button', { name: 'Save and connect' }).click()
   await page.getByText(/WhatsApp phone linked; gateway restart started/).waitFor()
-  check(calls().some(c => c.http === 'POST' && c.path === '/api/messaging/whatsapp/onboarding/start' && c.body?.mode === 'bot'), 'phone pairing starts through the WhatsApp onboarding API')
+  check(calls().some(c => c.http === 'POST' && c.path === '/api/messaging/whatsapp/onboarding/start' && c.body?.mode === 'bot' && c.body?.pairing_method === 'phone' && c.body?.phone_number === '+201001234567'), 'phone pairing starts through the WhatsApp onboarding API with the entered number')
   check(calls().some(c => c.http === 'GET' && c.path === '/api/messaging/whatsapp/onboarding/wa-pair-1'), 'the app polls the pairing session until the phone is linked')
   check(calls().some(c => c.http === 'POST' && c.path === '/api/messaging/whatsapp/onboarding/wa-pair-1/apply'), 'linked WhatsApp phone is saved and the gateway restart is requested')
   } finally {
