@@ -43,6 +43,7 @@ import {
   buildTextSendPayload,
   createBoundedMessageStore,
   createQuotedMediaCache,
+  deliveryStatusEvent,
   extractBridgeEvent,
   getMessageContent,
   inboundReadReceiptKeys,
@@ -119,6 +120,7 @@ try {
 } catch {}
 const PAIR_ONLY = args.includes('--pair-only');
 const PAIR_JSON = args.includes('--pair-json');
+const PAIR_PHONE = getArg('pair-phone', '').replace(/\D/g, '');
 const WHATSAPP_MODE = getArg('mode', process.env.WHATSAPP_MODE || 'self-chat'); // "bot" or "self-chat"
 const WHATSAPP_DM_POLICY = String(process.env.WHATSAPP_DM_POLICY || 'open').trim().toLowerCase();
 const WHATSAPP_GROUP_POLICY = String(process.env.WHATSAPP_GROUP_POLICY || 'pairing').trim().toLowerCase();
@@ -375,14 +377,45 @@ function rememberSentId(id) {
   recentlySentIds.remember(id);
 }
 
+// Receipts get their own bound: one reply to a large group brings a receipt per member, and in the
+// shared queue that burst evicted inbound messages still waiting for the next poll.
+const deliveryQueue = [];
+
+function enqueueDeliveryStatus(args) {
+  const event = deliveryStatusEvent({ ...args, isOwnSend: id => recentlySentIds.has(id) });
+  if (!event) return;
+  deliveryQueue.push(event);
+  if (deliveryQueue.length > MAX_QUEUE_SIZE) {
+    deliveryQueue.shift();
+  }
+}
+
 let sock = null;
 let connectionState = 'disconnected';
+let credsSaveQueue = Promise.resolve();
+let credsSaveError = null;
+let pairOnlyCompletionStarted = false;
+
+function queueCredsSave(saveCreds) {
+  credsSaveQueue = credsSaveQueue.then(async () => {
+    await saveCreds();
+    credsSaveError = null;
+  }).catch((err) => {
+    credsSaveError = err;
+    console.error('[pairing] Failed to save WhatsApp credentials:', err?.message || err);
+  });
+  return credsSaveQueue;
+}
 
 function emitPairEvent(event) {
-  if (!PAIR_JSON) return;
-  try {
-    writeJsonLine({ ts: Date.now(), ...event });
-  } catch {}
+  if (!PAIR_JSON) return Promise.resolve();
+  return new Promise(resolve => {
+    try {
+      process.stdout.write(`${JSON.stringify({ ts: Date.now(), ...event })}\n`, resolve);
+    } catch {
+      resolve();
+    }
+  });
 }
 
 const scheduleReconnect = createReconnectScheduler(() => startSocket());
@@ -409,15 +442,15 @@ async function startSocket() {
     },
   });
 
-  sock.ev.on('creds.update', () => { saveCreds(); lidToPhone = buildLidMap(); });
+  sock.ev.on('creds.update', () => { void queueCredsSave(saveCreds); lidToPhone = buildLidMap(); });
 
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      if (PAIR_JSON) {
+      if (PAIR_JSON && !PAIR_PHONE) {
         emitPairEvent({ event: 'qr', qr });
-      } else {
+      } else if (!PAIR_JSON && !PAIR_PHONE) {
         console.log('\n📱 Scan this QR code with WhatsApp on your phone:\n');
         // The QR block is multi-line art; a stamp on its first row would skew it.
         qrcode.generate(qr, { small: true }, (code) => process.stdout.write(`${code}\n`));
@@ -455,22 +488,54 @@ async function startSocket() {
             name: sock.user.name || sock.user.verifiedName || null,
           }
         : null;
-      emitPairEvent({ event: 'connected', user: connectedUser });
+      if (PAIR_ONLY && PAIR_JSON) {
+        if (pairOnlyCompletionStarted) return;
+        pairOnlyCompletionStarted = true;
+        // Do not tell the dashboard pairing succeeded until Baileys has
+        // finished writing its credentials. This removes the old arbitrary
+        // two-second delay and avoids racing the gateway restart against disk.
+        void queueCredsSave(saveCreds).then(async () => {
+          if (credsSaveError) throw credsSaveError;
+          await emitPairEvent({ event: 'connected', user: connectedUser });
+          process.exit(0);
+        }).catch(async (err) => {
+          await emitPairEvent({ event: 'error', error: `Could not save WhatsApp credentials: ${err?.message || err}` });
+          process.exit(1);
+        });
+      } else {
+        emitPairEvent({ event: 'connected', user: connectedUser });
+      }
       if (!PAIR_JSON) {
         console.log('✅ WhatsApp connected!');
       }
-      if (PAIR_ONLY) {
+      if (PAIR_ONLY && !PAIR_JSON) {
         if (!PAIR_JSON) {
           console.log('✅ Pairing complete. Credentials saved.');
         }
-        // Give Baileys a moment to flush creds, then exit cleanly
-        setTimeout(() => process.exit(0), 2000);
+        setImmediate(() => process.exit(0));
       }
     }
   });
 
+  // Baileys' pairing-code flow is initiated directly after makeWASocket().
+  // Waiting for a QR update first can stall forever because phone pairing
+  // does not depend on receiving a QR payload.
+  if (PAIR_PHONE && !state.creds.registered) {
+    sock.requestPairingCode(PAIR_PHONE).then((code) => {
+      if (code) emitPairEvent({ event: 'pairing_code', code });
+      else emitPairEvent({ event: 'error', error: 'WhatsApp returned an empty pairing code.' });
+    }).catch((err) => {
+      emitPairEvent({ event: 'error', error: err?.message || 'Could not request a WhatsApp pairing code.' });
+    });
+  }
+
+  sock.ev.on('message-receipt.update', (receipts) => {
+    for (const { key, receipt } of receipts || []) enqueueDeliveryStatus({ key, receipt });
+  });
+
   sock.ev.on('messages.update', async (updates) => {
     for (const { key, update } of updates || []) {
+      if (update?.status !== undefined) enqueueDeliveryStatus({ key, update });
       if (!update?.pollUpdates) continue;
       const pollCreationId = key?.id || update.pollUpdates?.[0]?.pollCreationMessageKey?.id;
       const pollCreation = messageStore.get(pollCreationId);
@@ -833,7 +898,7 @@ app.use((req, res, next) => {
 
 // Poll for new messages (long-poll style)
 app.get('/messages', (req, res) => {
-  const msgs = messageQueue.splice(0, messageQueue.length);
+  const msgs = messageQueue.splice(0, messageQueue.length).concat(deliveryQueue.splice(0, deliveryQueue.length));
   res.json(msgs);
 });
 
@@ -1132,13 +1197,15 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     scriptHash: SCRIPT_HASH,
     sendReadReceipts: SEND_READ_RECEIPTS,
+    // path.resolve, not realpath: the adapter compares against os.path.abspath, which keeps symlinks.
+    session: path.resolve(SESSION_DIR),
     capabilities: { outboundMentions: true },
   });
 });
 
 // Start
 if (PAIR_ONLY) {
-  // Pair-only mode: just connect, show QR, save creds, exit. No HTTP server.
+  // Pair-only mode: connect, show a QR or request a phone pairing code, save creds, exit.
   if (PAIR_JSON) {
     emitPairEvent({ event: 'started', session: SESSION_DIR });
   } else {
@@ -1154,7 +1221,7 @@ if (PAIR_ONLY) {
     process.exit(1);
   });
 } else {
-  app.listen(PORT, '127.0.0.1', () => {
+  const server = app.listen(PORT, '127.0.0.1', () => {
     console.log(`🌉 WhatsApp bridge listening on port ${PORT} (mode: ${WHATSAPP_MODE})`);
     console.log(`📁 Session stored in: ${SESSION_DIR}`);
     if (ALLOWED_USERS.size > 0) {
@@ -1173,5 +1240,15 @@ if (PAIR_ONLY) {
     }
     console.log();
     scheduleReconnect(0);
+  });
+  // Without this handler an EADDRINUSE (an old bridge that has not released the port yet) crashes
+  // with a bare stack trace; the adapter's reconnect loop retried blind. Fail loudly and fast.
+  server.on('error', (err) => {
+    if (err && err.code === 'EADDRINUSE') {
+      console.error(`FATAL: port ${PORT} already in use on 127.0.0.1 — another bridge or process is listening there.`);
+    } else {
+      console.error(`FATAL: bridge HTTP server error: ${err && err.message ? err.message : err}`);
+    }
+    process.exit(1);
   });
 }

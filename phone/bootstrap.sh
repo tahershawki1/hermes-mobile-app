@@ -11,7 +11,7 @@
 set -eE -o pipefail
 # The Hermes this installs = the build the app and hermes/patches are tested against. Bump together with
 # web/vendor/hermes-shared/.hermes-commit and .hermes-version (hermes/README.md; tools/test_bootstrap_pin.sh enforces it in CI).
-HERMES_COMMIT=b8a8be185d6e88b35e0a4fa794fea64fb06ed85b
+HERMES_COMMIT=0c5549c1e6d87f94928c20dda8c8f921011025c7
 HERMES_REPO=https://github.com/tahershawki1/hermes-agent.git
 MOBILE_REF=${HM_MOBILE_REF:-main}
 [[ "$MOBILE_REF" == main || "$MOBILE_REF" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid Hermes Mobile source ref" >&2; exit 1; }
@@ -25,6 +25,12 @@ PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
 # Debian runs under proot-distro (no root needed) or chroot-distro (rooted phones, HM_DISTRO=chroot). The choice is kept in
 # ~/.hermes-mobile/distro for install.sh, ~/bin/hermes-debian, the supervisor and the app.
 mkdir -p "$HOME/.hermes-mobile"
+# The app's RUN_COMMAND probe and setup controls may run while bootstrap is still downloading packages. Enable
+# Termux's external-app command bridge first; install.sh repeats this idempotently for computer/clone installs.
+mkdir -p "$HOME/.termux"
+grep -qE '^[[:space:]]*allow-external-apps[[:space:]]*=[[:space:]]*true' "$HOME/.termux/termux.properties" 2>/dev/null \
+  || echo "allow-external-apps = true" >> "$HOME/.termux/termux.properties"
+command -v termux-reload-settings >/dev/null && termux-reload-settings || true
 HM_DISTRO=${HM_DISTRO:-$(cat "$HOME/.hermes-mobile/distro" 2>/dev/null || true)}  # "|| true": set -e
 [ "$HM_DISTRO" = chroot ] || HM_DISTRO=proot
 echo "$HM_DISTRO" > "$HOME/.hermes-mobile/distro"
