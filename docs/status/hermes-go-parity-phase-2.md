@@ -6,7 +6,7 @@ Phase 2 follows the order of the Go-only feature inventory in `comparison-full-a
 
 | Order | Feature group | Practical acceptance check | State |
 |---:|---|---|---|
-| 1 | Messaging channel status and configuration. | Use a test Telegram/Discord channel; verify status, credentials handling, test and restart without exposing secrets. | Implemented; mock E2E passed; live device check pending |
+| 1 | Messaging channel status and configuration, including WhatsApp QR phone linking. | Use a test Telegram/Discord channel, then scan WhatsApp QR from a disposable phone; verify linked number, status, restart and reconnect without exposing secrets. | Implemented; mock E2E passed; live device check pending |
 | 2 | Webhook routes and lifecycle. | Create a test route, deliver a sample event, disable and delete it. | Paused |
 | 3 | Gateway pairing and QR provisioning. | Pair a disposable test account/device and verify accept/reject paths. | Paused |
 | 4 | Remote host health/status dashboard. | Compare app status to the selected test host and verify offline/error states. | Paused |

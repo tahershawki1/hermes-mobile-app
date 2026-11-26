@@ -107,8 +107,10 @@ let messagingPlatforms = [
     { key: 'DISCORD_BOT_TOKEN', prompt: 'Bot token', required: true, is_set: false, is_password: true, redacted_value: null }
   ] },
   { id: 'slack', name: 'Slack', description: 'Slack bot', enabled: false, configured: false, gateway_running: true, state: 'disabled', env_vars: [] },
-  { id: 'whatsapp', name: 'WhatsApp', description: 'Not part of this Hermes Go phase', enabled: false, configured: false, gateway_running: true, state: 'disabled', env_vars: [] }
+  { id: 'whatsapp', name: 'WhatsApp', description: 'Link a phone and receive messages', enabled: false, configured: false, gateway_running: true, state: 'disabled', whatsapp_setup: { mode: '', allowed_users_set: false, home_channel_set: false }, env_vars: [] }
 ]
+let whatsappOnboarding = null
+let whatsappPolls = 0
 // The rest of config.yaml (Settings → Hermes settings): the pinned Hermes's defaults (tools/hermes-config-fixture.py)
 // under what PUT /api/config saved, merged like Hermes's _deep_merge (maps merge, anything else replaces, null over a map
 // is ignored). The model, reasoning, plugin list and rotation keys keep their own handling above and below.
@@ -457,6 +459,34 @@ const server = http.createServer((req, res) => {
       return send({ ok: true })
     }
     if (p === '/api/messaging/platforms' && req.method === 'GET') return send({ platforms: messagingPlatforms })
+    if (p === '/api/messaging/whatsapp/onboarding/start' && req.method === 'POST') {
+      const b = JSON.parse(body || '{}')
+      whatsappPolls = 0
+      whatsappOnboarding = {
+        pairing_id: 'wa-pair-1', status: 'waiting', qr_payload: 'whatsapp-fixture-pairing-payload',
+        expires_at: new Date(Date.now() + 600000).toISOString(), mode: b.mode || 'bot', allowed_users: b.allowed_users || ''
+      }
+      return send(whatsappOnboarding)
+    }
+    const whatsappMatch = /^\/api\/messaging\/whatsapp\/onboarding\/([^/]+)(?:\/(apply))?$/.exec(p)
+    if (whatsappMatch && req.method === 'GET' && !whatsappMatch[2]) {
+      if (!whatsappOnboarding || whatsappMatch[1] !== whatsappOnboarding.pairing_id) return send({ detail: 'WhatsApp setup session was not found' }, 404)
+      whatsappPolls++
+      if (whatsappPolls >= 1) Object.assign(whatsappOnboarding, { status: 'connected', qr_payload: null, account_phone: '+201001234567', account_name: 'Fixture Phone' })
+      return send(whatsappOnboarding)
+    }
+    if (whatsappMatch && req.method === 'POST' && whatsappMatch[2]) {
+      if (!whatsappOnboarding || whatsappOnboarding.status !== 'connected') return send({ detail: 'WhatsApp setup is not connected yet.' }, 409)
+      const b = JSON.parse(body || '{}')
+      const platform = messagingPlatforms.find(x => x.id === 'whatsapp')
+      Object.assign(whatsappOnboarding, { mode: b.mode || 'bot' })
+      Object.assign(platform, { enabled: true, configured: true, state: 'connected', whatsapp_setup: { mode: b.mode || 'bot', allowed_users_set: true, home_channel_set: false } })
+      return send({ ok: true, platform: 'whatsapp', needs_restart: false, restart_started: true })
+    }
+    if (whatsappMatch && req.method === 'DELETE') {
+      whatsappOnboarding = null
+      return send({ ok: true })
+    }
     const messagingMatch = /^\/api\/messaging\/platforms\/([^/]+)(?:\/(test))?$/.exec(p)
     if (messagingMatch && req.method === 'PUT' && !messagingMatch[2]) {
       const id = decodeURIComponent(messagingMatch[1])
