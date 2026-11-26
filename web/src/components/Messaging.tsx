@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import QRCode from 'qrcode'
 import { api } from '../api'
 import { haptic } from '../bridge'
 import { confirmDialog } from '../dialog'
@@ -76,7 +77,9 @@ export function MessagingScreen() {
   const [tests, setTests] = useState<Record<string, PlatformTest>>({})
   const [restartNeeded, setRestartNeeded] = useState(false)
   const [whatsapp, setWhatsApp] = useState<WhatsAppSetupState | null>(null)
+  const [whatsappPairingMethod, setWhatsAppPairingMethod] = useState<'phone' | 'qr'>('phone')
   const [whatsappPhone, setWhatsAppPhone] = useState('')
+  const [whatsappQrImage, setWhatsAppQrImage] = useState('')
   const [linkedPhone, setLinkedPhone] = useState('')
   const appliedWhatsAppPairing = useRef('')
 
@@ -117,20 +120,31 @@ export function MessagingScreen() {
 
   useEffect(() => {
     const session = whatsapp
-    if (!session || !['starting', 'waiting'].includes(session.status) || session.pairing_code) return
+    if (!session || session.pairing_method !== 'phone' || !['starting', 'waiting'].includes(session.status) || session.pairing_code) return
     const timer = window.setTimeout(() => {
       setWhatsApp(current => current?.pairing_id === session.pairing_id && !current.pairing_code
         ? { ...current, status: 'error', error: navigationText('Hermes did not receive a link code. Check the phone number and internet connection, then try again.', 'لم يصل رمز الربط من المحرك. راجع رقم الهاتف والإنترنت ثم حاول مرة أخرى.') }
         : current)
-    }, 30000)
+    }, 120000)
     return () => window.clearTimeout(timer)
-  }, [whatsapp?.pairing_id, whatsapp?.status, whatsapp?.pairing_code])
+  }, [whatsapp?.pairing_id, whatsapp?.pairing_method, whatsapp?.status, whatsapp?.pairing_code])
+
+  useEffect(() => {
+    let active = true
+    setWhatsAppQrImage('')
+    if (!whatsapp?.qr_payload) return () => { active = false }
+    void QRCode.toDataURL(whatsapp.qr_payload, { width: 512, margin: 1, errorCorrectionLevel: 'M' })
+      .then(image => { if (active) setWhatsAppQrImage(image) })
+      .catch(() => { if (active) setWhatsAppQrImage('') })
+    return () => { active = false }
+  }, [whatsapp?.pairing_id, whatsapp?.qr_payload])
 
   const startWhatsAppLink = async (resetSession = false) => {
     setBusy('whatsapp-link')
     try {
       const state = await api<WhatsAppSetupState>('POST', '/api/messaging/whatsapp/onboarding/start', {
-        mode: 'bot', pairing_method: 'phone', phone_number: whatsappPhone,
+        mode: 'bot', pairing_method: whatsappPairingMethod,
+        phone_number: whatsappPairingMethod === 'phone' ? whatsappPhone : '',
         allowed_users: '', reset_session: resetSession
       })
       setWhatsApp(state)
@@ -300,30 +314,40 @@ export function MessagingScreen() {
               </div>
               {platform.error_message && <p className="hm-channel-error">{platform.error_message}</p>}
               {expanded && <div className="hm-channel-details">
-                {platform.id === 'whatsapp' && <section className="hm-whatsapp-link" aria-label={navigationText('Link a WhatsApp phone', 'ربط رقم واتساب')}>
+                {platform.id === 'whatsapp' && <section className="hm-whatsapp-link" aria-label={navigationText('WhatsApp link setup', 'إعداد ربط واتساب')}>
                   <div className="hm-whatsapp-link-head">
                     <strong>{navigationText('Connect WhatsApp', 'ربط واتساب')}</strong>
-                    <p>{navigationText('Enter your WhatsApp number. This is a device-link code, not an SMS code; enter the code shown here inside WhatsApp to approve the connection.', 'أدخل رقم واتساب. هذا رمز ربط جهاز وليس رسالة SMS؛ أدخل الرمز الذي يظهر هنا داخل واتساب لتأكيد الاتصال.')}</p>
+                    <p>{navigationText('Choose how to link your WhatsApp account.', 'اختر طريقة ربط حساب واتساب.')}</p>
                   </div>
                   {linkedPhone && <div className="hm-whatsapp-phone"><span>{navigationText('Linked phone', 'الهاتف المرتبط')}</span><bdi dir="ltr">{linkedPhone}</bdi></div>}
                   {!whatsapp && <>
-                    <label className="hm-channel-field">
-                      <span className="hm-channel-field-title">{navigationText('Phone number with country code', 'رقم الهاتف مع مفتاح الدولة')}</span>
-                      <input className="sheet-input" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="+201234567890" value={whatsappPhone} onChange={e => setWhatsAppPhone(e.target.value)} />
-                    </label>
+                    <div className="hm-whatsapp-methods" role="group" aria-label={navigationText('WhatsApp linking method', 'طريقة ربط واتساب')}>
+                      <button type="button" className={`btn hm-whatsapp-method${whatsappPairingMethod === 'phone' ? ' selected' : ''}`} aria-pressed={whatsappPairingMethod === 'phone'} onClick={() => setWhatsAppPairingMethod('phone')}>{navigationText('Phone number', 'رقم الهاتف')}</button>
+                      <button type="button" className={`btn hm-whatsapp-method${whatsappPairingMethod === 'qr' ? ' selected' : ''}`} aria-pressed={whatsappPairingMethod === 'qr'} onClick={() => setWhatsAppPairingMethod('qr')}>{navigationText('QR code', 'رمز QR')}</button>
+                    </div>
+                    {whatsappPairingMethod === 'phone' ? <>
+                      <label className="hm-channel-field">
+                        <span className="hm-channel-field-title">{navigationText('Phone number with country code', 'رقم الهاتف مع مفتاح الدولة')}</span>
+                        <input className="sheet-input" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="+201234567890" value={whatsappPhone} onChange={e => setWhatsAppPhone(e.target.value)} />
+                      </label>
+                      <p className="hm-whatsapp-method-hint">{navigationText('Hermes will show a device-link code. Enter it in WhatsApp; it is not sent by SMS.', 'سيعرض هيرمس رمز ربط جهاز. أدخله في واتساب؛ لا يُرسل عبر SMS.')}</p>
+                    </> : <p className="hm-whatsapp-method-hint">{navigationText('Hermes will display a QR code. Scan it in WhatsApp under Linked devices → Link a device.', 'سيعرض هيرمس رمز QR. امسحه من واتساب عبر الأجهزة المرتبطة ← ربط جهاز.')}</p>}
                     <div className="hm-channel-actions">
-                      <button className="btn primary" disabled={busy === 'whatsapp-link' || whatsappPhone.replace(/\D/g, '').length < 8} onClick={async () => {
+                      <button className="btn primary" disabled={busy === 'whatsapp-link' || (whatsappPairingMethod === 'phone' && whatsappPhone.replace(/\D/g, '').length < 8)} onClick={async () => {
                         if (linkedPhone) {
-                          if (await confirmDialog({ title: navigationText('Change WhatsApp number?', 'تغيير رقم واتساب؟'), message: navigationText('Hermes will back up the current WhatsApp link before replacing it.', 'سيحفظ هيرمس نسخة من ربط واتساب الحالي قبل استبداله.'), confirmLabel: navigationText('Continue', 'متابعة') })) void startWhatsAppLink(true)
+                          if (await confirmDialog({ title: navigationText('Change WhatsApp link?', 'تغيير ربط واتساب؟'), message: navigationText('Hermes will back up the current WhatsApp link before replacing it.', 'سيحفظ هيرمس نسخة من ربط واتساب الحالي قبل استبداله.'), confirmLabel: navigationText('Continue', 'متابعة') })) void startWhatsAppLink(true)
                         } else void startWhatsAppLink()
-                      }}>{busy === 'whatsapp-link' ? navigationText('Requesting code…', 'جارٍ طلب الرمز…') : navigationText(linkedPhone ? 'Change number' : 'Link WhatsApp', linkedPhone ? 'تغيير الرقم' : 'ربط واتساب')}</button>
+                      }}>{busy === 'whatsapp-link' ? navigationText('Starting link…', 'جارٍ بدء الربط…') : navigationText(whatsappPairingMethod === 'phone' ? (linkedPhone ? 'Change number' : 'Link by phone') : (linkedPhone ? 'Change link' : 'Show QR code'), whatsappPairingMethod === 'phone' ? (linkedPhone ? 'تغيير الرقم' : 'الربط برقم الهاتف') : (linkedPhone ? 'تغيير الربط' : 'عرض رمز QR'))}</button>
                     </div>
                   </>}
                   {whatsapp && <div className="hm-whatsapp-pairing" role="status">
                     {whatsapp.status === 'waiting' && whatsapp.pairing_code && <div className="hm-whatsapp-code" dir="ltr" aria-label={navigationText('WhatsApp pairing code', 'رمز ربط واتساب')}>{whatsapp.pairing_code}</div>}
-                    {whatsapp.status === 'starting' && <p>{navigationText('Asking the Hermes engine for a link code…', 'جارٍ طلب رمز الربط من محرك هيرمس…')}</p>}
+                    {whatsapp.status === 'waiting' && whatsapp.pairing_method === 'qr' && whatsappQrImage && <img className="hm-whatsapp-qr" src={whatsappQrImage} alt={navigationText('WhatsApp linking QR code', 'رمز QR لربط واتساب')} />}
+                    {whatsapp.status === 'starting' && <p>{whatsapp.pairing_method === 'qr' ? navigationText('Connecting to WhatsApp and preparing a QR code…', 'جارٍ الاتصال بواتساب وتجهيز رمز QR…') : navigationText('Asking the Hermes engine for a link code…', 'جارٍ طلب رمز الربط من محرك هيرمس…')}</p>}
                     {whatsapp.status === 'waiting' && whatsapp.pairing_code && <p>{navigationText('In WhatsApp, open Linked devices → Link a device → Link with phone number instead, then enter this code.', 'في واتساب افتح الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف بدلاً من ذلك، ثم أدخل هذا الرمز.')}</p>}
-                    {whatsapp.status === 'waiting' && !whatsapp.pairing_code && <p>{navigationText('Waiting for the link code from the Hermes engine…', 'بانتظار رمز الربط من محرك هيرمس…')}</p>}
+                    {whatsapp.status === 'waiting' && whatsapp.pairing_method === 'qr' && !whatsapp.qr_payload && <p>{navigationText('Waiting for the QR code from the Hermes engine…', 'بانتظار رمز QR من محرك هيرمس…')}</p>}
+                    {whatsapp.status === 'waiting' && whatsapp.pairing_method === 'phone' && !whatsapp.pairing_code && <p>{navigationText('Waiting for the link code from the Hermes engine…', 'بانتظار رمز الربط من محرك هيرمس…')}</p>}
+                    {whatsapp.status === 'waiting' && whatsapp.pairing_method === 'qr' && whatsapp.qr_payload && <p>{navigationText('In WhatsApp, open Linked devices → Link a device and scan this QR code.', 'في واتساب افتح الأجهزة المرتبطة ← ربط جهاز ثم امسح رمز QR هذا.')}</p>}
                     {whatsapp.status === 'connected' && !whatsapp.error && <p className="hm-whatsapp-connected">{navigationText('Code accepted. Saving the connection…', 'تم قبول الرمز. جارٍ حفظ الاتصال…')}</p>}
                     {whatsapp.status === 'connected' && whatsapp.error && <>
                       <p className="hm-channel-error">{whatsapp.error}</p>
