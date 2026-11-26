@@ -111,6 +111,7 @@ let messagingPlatforms = [
 ]
 let whatsappOnboarding = null
 let whatsappPolls = 0
+let knowledgeSkillInstalled = false
 // The rest of config.yaml (Settings → Hermes settings): the pinned Hermes's defaults (tools/hermes-config-fixture.py)
 // under what PUT /api/config saved, merged like Hermes's _deep_merge (maps merge, anything else replaces, null over a map
 // is ignored). The model, reasoning, plugin list and rotation keys keep their own handling above and below.
@@ -519,7 +520,13 @@ const server = http.createServer((req, res) => {
       for (const platform of messagingPlatforms) if (platform.enabled && platform.configured) platform.state = 'connected'
       return send({ ok: true, pid: 123, name: 'gateway-restart' })
     }
-    if (p === '/api/skills') return send([{ name: 'a', enabled: true }, { name: 'b', enabled: true }, { name: 'c', enabled: false }])
+    if (p === '/api/skills/hub/official' && req.method === 'GET') return send({ skills: [{ name: 'weather-helper', description: 'Weather lookups', category: 'general', identifier: 'official/general/weather-helper', installed: knowledgeSkillInstalled }] })
+    if (p === '/api/skills/hub/install' && req.method === 'POST') return send({ ok: true, name: 'skills-install-weather-helper-12345678' })
+    if (p === '/api/actions/skills-install-weather-helper-12345678/status' && req.method === 'GET') {
+      knowledgeSkillInstalled = true
+      return send({ name: 'skills-install-weather-helper-12345678', running: false, exit_code: 0, lines: ['Installed weather-helper'] })
+    }
+    if (p === '/api/skills') return send([{ name: 'a', enabled: true }, { name: 'b', enabled: true }, { name: 'c', enabled: false }, ...(knowledgeSkillInstalled ? [{ name: 'weather-helper', description: 'Weather lookups', category: 'general', enabled: true, provenance: 'hub' }] : [])])
     if (p === '/api/plugins/hermes-mobile/memory' && req.method === 'POST') {
       // Like the plugin: Hermes's memory store does the change, the answer holds its result and the fresh snapshot of THAT target only.
       const b = JSON.parse(body || '{}')
