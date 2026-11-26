@@ -155,3 +155,63 @@
   background: var(--surface);
 }
 .hm-chat-composer .composer:focus-within { border-color: var(--hm-nav-accent); }
+
+/* Messaging channels (the mobile equivalent of Hermes Go → Connect → Channels). */
+.hm-messaging-screen .hm-messaging-body {
+  width: min(100%, 760px);
+  margin-inline: auto;
+  padding: 14px 16px max(24px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+.hm-messaging-body > .dim { margin: 0 0 14px; font-size: .88rem; }
+.hm-messaging-restart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--warn);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--warn) 9%, var(--surface));
+}
+.hm-channel-list { display: grid; gap: 10px; }
+.hm-channel-card { border: 1px solid var(--border); border-radius: 15px; background: var(--surface); overflow: hidden; }
+.hm-channel-head { display: flex; align-items: center; gap: 8px; padding: 10px; }
+.hm-channel-expand {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: start;
+}
+.hm-channel-expand > span:first-child { display: grid; gap: 4px; min-width: 0; }
+.hm-channel-expand strong { font-size: .98rem; }
+.hm-channel-expand small { color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
+.hm-channel-state { display: inline-flex; flex: none; align-items: center; gap: 5px; font-size: .8rem; font-weight: 650; }
+.hm-channel-state.ok { color: var(--ok); }
+.hm-channel-state.warn { color: var(--warn); }
+.hm-channel-state.err { color: var(--err); }
+.hm-channel-state.dim { color: var(--dim); }
+.hm-channel-state-ar { display: none; }
+[lang='ar'] .hm-channel-state-ar { display: inline; }
+.hm-channel-error { margin: 0; padding: 0 12px 10px; color: var(--err); font-size: .84rem; }
+.hm-channel-details { display: grid; gap: 12px; padding: 12px; border-top: 1px solid var(--border); }
+.hm-channel-field { display: grid; gap: 5px; min-width: 0; }
+.hm-channel-field-title { display: flex; align-items: center; gap: 8px; font-size: .88rem; font-weight: 620; }
+.hm-channel-field-title em { color: var(--warn); font-size: .74rem; font-style: normal; font-weight: 500; }
+.hm-channel-field small { color: var(--dim); font-size: .78rem; overflow-wrap: anywhere; }
+.hm-channel-input-wrap { display: flex; align-items: center; gap: 6px; }
+.hm-channel-input-wrap input { min-width: 0; flex: 1; }
+.hm-channel-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.hm-channel-test { padding: 10px; border-radius: 10px; background: var(--surface-2); font-size: .86rem; }
+.hm-channel-test.ok { color: var(--ok); }
+.hm-channel-test.err { color: var(--err); }
+@media (max-width: 420px) {
+  .hm-channel-head { align-items: flex-start; flex-direction: column; }
+  .hm-channel-expand { width: 100%; }
+  .hm-channel-state { font-size: .75rem; }
+}

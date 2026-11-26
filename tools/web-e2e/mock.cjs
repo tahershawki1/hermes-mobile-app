@@ -98,6 +98,17 @@ let poolSeeded = new Set()
 let rotation = { fallback_providers: [], credential_pool_strategies: {} }
 // Error injection for browser regressions, keyed by HTTP method and path.
 let routeFail = {}
+let messagingPlatforms = [
+  { id: 'telegram', name: 'Telegram', description: 'Bot chat', enabled: true, configured: true, gateway_running: true, state: 'connected', env_vars: [
+    { key: 'TELEGRAM_BOT_TOKEN', prompt: 'Bot token', required: true, is_set: true, is_password: true, redacted_value: '••••••' },
+    { key: 'TELEGRAM_ALLOWED_USERS', prompt: 'Allowed users', required: false, is_set: true, is_password: false, is_list: true, value: '12345', redacted_value: null }
+  ] },
+  { id: 'discord', name: 'Discord', description: 'Discord bot', enabled: false, configured: false, gateway_running: true, state: 'disabled', env_vars: [
+    { key: 'DISCORD_BOT_TOKEN', prompt: 'Bot token', required: true, is_set: false, is_password: true, redacted_value: null }
+  ] },
+  { id: 'slack', name: 'Slack', description: 'Slack bot', enabled: false, configured: false, gateway_running: true, state: 'disabled', env_vars: [] },
+  { id: 'whatsapp', name: 'WhatsApp', description: 'Not part of this Hermes Go phase', enabled: false, configured: false, gateway_running: true, state: 'disabled', env_vars: [] }
+]
 // The rest of config.yaml (Settings → Hermes settings): the pinned Hermes's defaults (tools/hermes-config-fixture.py)
 // under what PUT /api/config saved, merged like Hermes's _deep_merge (maps merge, anything else replaces, null over a map
 // is ignored). The model, reasoning, plugin list and rotation keys keep their own handling above and below.
@@ -444,6 +455,36 @@ const server = http.createServer((req, res) => {
       cfgSaved = deepMerge(cfgSaved, rest)
       if (b.config?.credential_pool_strategies) rotation.credential_pool_strategies = { ...rotation.credential_pool_strategies, ...b.config.credential_pool_strategies }
       return send({ ok: true })
+    }
+    if (p === '/api/messaging/platforms' && req.method === 'GET') return send({ platforms: messagingPlatforms })
+    const messagingMatch = /^\/api\/messaging\/platforms\/([^/]+)(?:\/(test))?$/.exec(p)
+    if (messagingMatch && req.method === 'PUT' && !messagingMatch[2]) {
+      const id = decodeURIComponent(messagingMatch[1])
+      const platform = messagingPlatforms.find(x => x.id === id)
+      if (!platform) return send({ detail: 'Unknown messaging platform' }, 404)
+      const b = JSON.parse(body || '{}')
+      if (b.enabled !== undefined) {
+        platform.enabled = Boolean(b.enabled)
+        platform.state = platform.enabled ? 'pending_restart' : 'disabled'
+      }
+      for (const key of b.clear_env || []) {
+        const field = platform.env_vars.find(x => x.key === key)
+        if (field) { field.is_set = false; field.value = null; field.redacted_value = null }
+      }
+      for (const [key, value] of Object.entries(b.env || {})) {
+        const field = platform.env_vars.find(x => x.key === key)
+        if (field && value) { field.is_set = true; if (!field.is_password) field.value = value; else field.redacted_value = '••••••' }
+      }
+      return send({ ok: true, platform: id, hot_served: false })
+    }
+    if (messagingMatch && req.method === 'POST' && messagingMatch[2]) {
+      const platform = messagingPlatforms.find(x => x.id === decodeURIComponent(messagingMatch[1]))
+      if (!platform) return send({ detail: 'Unknown messaging platform' }, 404)
+      return send({ ok: platform.state === 'connected', state: platform.state, message: platform.state === 'connected' ? `${platform.name} is connected.` : 'Gateway is not running.' })
+    }
+    if (p === '/api/gateway/restart' && req.method === 'POST') {
+      for (const platform of messagingPlatforms) if (platform.enabled && platform.configured) platform.state = 'connected'
+      return send({ ok: true, pid: 123, name: 'gateway-restart' })
     }
     if (p === '/api/skills') return send([{ name: 'a', enabled: true }, { name: 'b', enabled: true }, { name: 'c', enabled: false }])
     if (p === '/api/plugins/hermes-mobile/memory' && req.method === 'POST') {

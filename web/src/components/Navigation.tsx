@@ -145,6 +145,7 @@ const ENTRIES: Record<'work' | 'knowledge' | 'more', Entry[]> = {
     { icon: 'file', label: ['Memory', 'الذاكرة'], description: ['Read and edit what Hermes remembers', 'اعرض وعدّل ما يتذكره Hermes'], target: 'memory' }
   ],
   more: [
+    { icon: 'signal', label: ['Messaging channels', 'قنوات المراسلة'], description: ['Telegram, Discord and Slack status and setup', 'حالة وإعداد Telegram وDiscord وSlack'], target: 'messaging' },
     { icon: 'bots', label: ['Bots', 'الوكلاء'], description: ['Profiles, models and personalities', 'الملفات والنماذج وشخصيات الوكلاء'], target: 'bots' },
     { icon: 'signal', label: ['Connection', 'الاتصال'], description: ['Local Dashboard and session status', 'حالة لوحة التحكم المحلية والجلسة'], target: 'status' },
     { icon: 'system', label: ['System', 'النظام'], description: ['Termux, permissions and setup check', 'فحص إعداد Termux والصلاحيات'], target: 'setup' },

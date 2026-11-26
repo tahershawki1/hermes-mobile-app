@@ -40,6 +40,7 @@ import { SettingsScreen } from './components/Settings'
 import { SetupFlow, SetupScreen, checkSetupFlow, watchFirstRun } from './components/Setup'
 import { BotsScreen } from './components/Bots'
 import { GalleryScreen } from './components/Gallery'
+import { MessagingScreen } from './components/Messaging'
 import { CronScreen, FilesScreen, HubScreen, MemoryScreen, ProjectsScreen, SkillsScreen } from './components/Screens'
 import { Spinner } from './components/Spinner'
 import { HermesPresence, WorkingPresence } from './components/HermesPresence'
@@ -937,6 +938,7 @@ export function App() {
       {screen === 'files' && <FilesScreen onUse={t => setInjected(t)} />}
       {screen === 'projects' && <ProjectsScreen />}
       {screen === 'gallery' && <GalleryScreen />}
+      {screen === 'messaging' && <MessagingScreen />}
       {screen === 'bots' && <BotsScreen />}
       {screen === 'settings' && <SettingsScreen key={screenKey} />}
       {screen === 'setup' && <SetupScreen />}
