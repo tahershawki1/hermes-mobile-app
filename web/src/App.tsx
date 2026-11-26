@@ -108,7 +108,12 @@ function Header() {
   return (
     <header className="topbar">
       <button className="icon-btn menu-btn" aria-label={menuLabel} onClick={() => (wide ? toggleSide() : setState({ drawer: true }))}>
-        ☰{unread && <span className="unread-dot on-menu" />}
+        {wide ? (
+          <svg className="side-panel-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3.5" y="4" width="17" height="16" rx="2.5" />
+            <path d={sideHidden ? 'M9 4v16m3-11 3 3-3 3' : 'M9 4v16m6-8-3-3m3 3-3 3'} />
+          </svg>
+        ) : <>☰{unread && <span className="unread-dot on-menu" />}</>}
       </button>
       <button className="title-btn" onClick={() => hasActive && setState({ sheet: 'chat-menu' })}>
         <span className="title hm-chat-title">

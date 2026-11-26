@@ -2,6 +2,8 @@
 
 The page is one React tree (`web/src/App.tsx` `App`). There are no URLs or router. What is on screen is decided by a few fields of the store (`web/src/store.ts` `AppState`):
 
+The primary navigation uses a blue accent in both dark and light themes (`web/src/components/Navigation.css`). On phones, the sessions drawer opens with a rightward swipe from chat and closes with a leftward swipe from its backdrop or inside its list; long row swipes close the drawer while shorter row swipes remain available for archive and delete.
+
 - `screen` (type `Screen`): a full-screen page drawn over the chat. `null` means the chat itself.
 - `sheet` (type `Sheet`): one bottom sheet owned by the chat area.
 - `drawer`: the sessions drawer is open.
