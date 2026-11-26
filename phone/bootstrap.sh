@@ -25,6 +25,12 @@ PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
 # Debian runs under proot-distro (no root needed) or chroot-distro (rooted phones, HM_DISTRO=chroot). The choice is kept in
 # ~/.hermes-mobile/distro for install.sh, ~/bin/hermes-debian, the supervisor and the app.
 mkdir -p "$HOME/.hermes-mobile"
+# The app's RUN_COMMAND probe and setup controls may run while bootstrap is still downloading packages. Enable
+# Termux's external-app command bridge first; install.sh repeats this idempotently for computer/clone installs.
+mkdir -p "$HOME/.termux"
+grep -qE '^[[:space:]]*allow-external-apps[[:space:]]*=[[:space:]]*true' "$HOME/.termux/termux.properties" 2>/dev/null \
+  || echo "allow-external-apps = true" >> "$HOME/.termux/termux.properties"
+command -v termux-reload-settings >/dev/null && termux-reload-settings || true
 HM_DISTRO=${HM_DISTRO:-$(cat "$HOME/.hermes-mobile/distro" 2>/dev/null || true)}  # "|| true": set -e
 [ "$HM_DISTRO" = chroot ] || HM_DISTRO=proot
 echo "$HM_DISTRO" > "$HOME/.hermes-mobile/distro"
