@@ -392,12 +392,30 @@ function enqueueDeliveryStatus(args) {
 
 let sock = null;
 let connectionState = 'disconnected';
+let credsSaveQueue = Promise.resolve();
+let credsSaveError = null;
+let pairOnlyCompletionStarted = false;
+
+function queueCredsSave(saveCreds) {
+  credsSaveQueue = credsSaveQueue.then(async () => {
+    await saveCreds();
+    credsSaveError = null;
+  }).catch((err) => {
+    credsSaveError = err;
+    console.error('[pairing] Failed to save WhatsApp credentials:', err?.message || err);
+  });
+  return credsSaveQueue;
+}
 
 function emitPairEvent(event) {
-  if (!PAIR_JSON) return;
-  try {
-    writeJsonLine({ ts: Date.now(), ...event });
-  } catch {}
+  if (!PAIR_JSON) return Promise.resolve();
+  return new Promise(resolve => {
+    try {
+      process.stdout.write(`${JSON.stringify({ ts: Date.now(), ...event })}\n`, resolve);
+    } catch {
+      resolve();
+    }
+  });
 }
 
 const scheduleReconnect = createReconnectScheduler(() => startSocket());
@@ -424,7 +442,7 @@ async function startSocket() {
     },
   });
 
-  sock.ev.on('creds.update', () => { saveCreds(); lidToPhone = buildLidMap(); });
+  sock.ev.on('creds.update', () => { void queueCredsSave(saveCreds); lidToPhone = buildLidMap(); });
 
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
@@ -470,16 +488,31 @@ async function startSocket() {
             name: sock.user.name || sock.user.verifiedName || null,
           }
         : null;
-      emitPairEvent({ event: 'connected', user: connectedUser });
+      if (PAIR_ONLY && PAIR_JSON) {
+        if (pairOnlyCompletionStarted) return;
+        pairOnlyCompletionStarted = true;
+        // Do not tell the dashboard pairing succeeded until Baileys has
+        // finished writing its credentials. This removes the old arbitrary
+        // two-second delay and avoids racing the gateway restart against disk.
+        void queueCredsSave(saveCreds).then(async () => {
+          if (credsSaveError) throw credsSaveError;
+          await emitPairEvent({ event: 'connected', user: connectedUser });
+          process.exit(0);
+        }).catch(async (err) => {
+          await emitPairEvent({ event: 'error', error: `Could not save WhatsApp credentials: ${err?.message || err}` });
+          process.exit(1);
+        });
+      } else {
+        emitPairEvent({ event: 'connected', user: connectedUser });
+      }
       if (!PAIR_JSON) {
         console.log('✅ WhatsApp connected!');
       }
-      if (PAIR_ONLY) {
+      if (PAIR_ONLY && !PAIR_JSON) {
         if (!PAIR_JSON) {
           console.log('✅ Pairing complete. Credentials saved.');
         }
-        // Give Baileys a moment to flush creds, then exit cleanly
-        setTimeout(() => process.exit(0), 2000);
+        setImmediate(() => process.exit(0));
       }
     }
   });
