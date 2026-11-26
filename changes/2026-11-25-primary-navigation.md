@@ -1,0 +1,1 @@
+- **Find Hermes tools from one navigation bar.** Home shows the connection status and recent chats. Sessions, Work, Knowledge and More make the existing files, scheduled jobs, Canvas, model providers, bots and setup easier to reach. The bar follows the phone's Arabic locale. Android phone review is pending.

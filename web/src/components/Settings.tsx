@@ -1091,18 +1091,18 @@ function HermesRow({ version }: { version: string }) {
   return <Row icon="⚕️" tone={mismatch ? 'gold' : 'teal'} title="Hermes" value={version} sub={sub} />
 }
 
-export function SettingsScreen() {
+export function SettingsScreen({ entry }: { entry?: 'models' | 'accounts' } = {}) {
   const current = useStore(s => s.profile)
   const opened = useStore(s => s.screenProfile)
-  const [page, setPage] = useState<Page>(() => (opened ? 'keys' : 'hub'))
+  const [page, setPage] = useState<Page>(() => entry ?? (opened ? 'keys' : 'hub'))
   const [scope, setScope] = useState(opened || current)
   const [rotation, setRotation] = useState(0) // bumped when a provider changed: the fallback list re-reads its key status
   useEffect(() => {
     void loadProfiles()
   }, [])
-  useBackHandler(() => setPage(page === 'stt' ? 'voice' : 'hub'), page !== 'hub') // Back on a sub-page returns to the hub (Speech recognition: to Voice)
+  useBackHandler(() => setPage(page === 'stt' ? 'voice' : 'hub'), page !== 'hub' && page !== entry) // Back on a sub-page returns to the hub (Speech recognition: to Voice)
   return (
-    <ScreenShell title={PAGE_TITLE[page]} onBack={page === 'hub' ? undefined : () => setPage(page === 'stt' ? 'voice' : 'hub')}>
+    <ScreenShell title={PAGE_TITLE[page]} onBack={page === 'hub' || page === entry ? undefined : () => setPage(page === 'stt' ? 'voice' : 'hub')}>
       {page === 'hub' && <Hub go={setPage} />}
       {page === 'appearance' && <AppearancePage />}
       {page === 'voice' && <VoiceSettings openStt={() => setPage('stt')} />}

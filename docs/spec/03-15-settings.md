@@ -163,3 +163,5 @@ Option sheet (title = key): the description; for a choice option a list with a â
 Hidden on purpose: everything that configures other chat platforms or the messaging gateway (the categories messaging, slack, discord, mattermost, matrix, gateway, bot_desktop; `display.platforms.*`, `agent.gateway_*`, `telegram.*`, `whatsapp.*`, `signal.*`, `email.*`).
 
 ---
+
+**Opened from Knowledge:** `SettingsScreen` accepts an `entry` of `models` or `accounts` to open Default models or Model providers directly. These entries use the active profile as the initial scope. The title Back button and Android Back return to Knowledge from that entry.

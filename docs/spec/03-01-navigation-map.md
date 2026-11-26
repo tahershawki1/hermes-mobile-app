@@ -121,7 +121,7 @@ The Android shell calls `window.hermesBack` (`App.tsx`). It returns `true` when 
 2. An open `sheet`: closed.
 3. The open drawer: closed.
 4. An open `screen`: `closeScreen()`.
-5. Otherwise `false`, and the shell does its own thing (leave the app).
+5. From chat, open Sessions. From Home or Sessions entered by pressing Back from chat, return `false` to let Android exit.
 
 `useBackHandler(onBack, active)` pushes a handler on a stack while `active`; later registrations sit on top of earlier ones.
 
@@ -164,4 +164,18 @@ Top to bottom in the DOM, which is also the paint order: `Header`, `ConnBanner`,
 
 ---
 
-**Conversations home.** The `chats` screen is an in-app navigation destination opened by Android Back from a conversation, not an app exit. It displays `ChatHome.tsx` as a full-screen `Conversations` region (the `aria-label: Conversations` accessibility name). Choosing a conversation returns to the chat; Back on this home permits Android to exit. Sheets and dialogs still take precedence over navigation.
+**Conversations home.** The `chats` screen is an in-app navigation destination opened by Android Back from a conversation, not an app exit. It displays `ChatHome.tsx` as a full-screen `Conversations` region (the `aria-label: Conversations` accessibility name). Choosing a conversation returns to the chat; Back permits Android to exit when this page was opened by Back from a conversation. Sheets and dialogs still take precedence over navigation.
+
+#### Main navigation
+
+`PrimaryNavigation` (`Navigation.tsx`) is the bottom bar for the chat and the five main destinations. `openDestination` (`navigation.ts`) changes the screen and captures its Back destination without recreating the current chat. A cold open still restores the last chat or the setup flow. The bar disappears in the setup flow, in subpages, when the phone is locked, while an overlay drawer is open, or while Canvas covers the chat. On wide screens it sits beside the docked chat list. The new labels and horizontal order follow Arabic WebView locales (`arabicNavigation`, `navigationText`). Conversation text retains its existing direction preferences.
+
+| Navigation item | Screen or action |
+|---|---|
+| Home (`home`) | `WorkspaceHome` shows the existing backend health state for local Hermes, opens `Backend status` through **Status details**, and offers Reconnect when offline. **New chat** starts a draft; **Continue chat** reveals the current conversation or draft. Recent chats and **View all** link to stored sessions. |
+| Sessions (`chats`) | `ChatHome` uses the existing search, pinned order and archive list. **Projects** opens the existing project screen, with Back returning to Sessions. |
+| Work (`work`) | `WorkspaceSection` lists Scheduled jobs, Files, Projects, Canvas gallery. Each opens the existing screen. |
+| Knowledge (`knowledge`) | `WorkspaceSection` opens Skills, Memory, and the existing Settings pages for Default models (`models`) and Model providers (`providers`). Back from those direct entries returns to Knowledge. |
+| More (`more`) | `WorkspaceSection` opens Bots, the local connection status sheet, System (Setup check), and Settings. A Setup check opened from the status sheet returns to the screen that opened that sheet. |
+
+When an approval is pending outside the chat on a main destination, **Review pending approval** returns to the current chat and its inline approval. Inside a conversation, Android Back still opens Sessions. On Sessions opened via the bar, Back returns to Home. On Sessions opened via Android Back from chat, Back permits Android to exit, as before. Work, Knowledge and More return to Home after their child screen closes. The login and transport flow, draft store and Android notification deep links are shared with the existing chat. `useLockView` subscribes to the native lock-screen state so the navigation bar updates when the assistant enters or leaves it.

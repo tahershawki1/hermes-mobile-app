@@ -3,6 +3,7 @@
 // the Android shell shows the app over the lock screen and calls window.hermesLockView(true). Then the page is for
 // talking only: answering a request (Allow, a question, a password) asks for an unlock first, the drawer, screens and
 // sheets ask for an unlock instead of opening, and ending Live mode puts the lock screen back.
+import { useSyncExternalStore } from 'react'
 import { getState, setState, subscribe, toast } from './store'
 
 export const LOCK_ASSIST_KEY = 'hm.lockAssist.v1'
@@ -33,10 +34,16 @@ export function setLockAssist(on: boolean): void {
 export const lockAssistAvailable = (): boolean => typeof bridge()?.setLockAssist === 'function'
 
 let on = false
+const listeners = new Set<() => void>()
+function subscribeLockView(listener: () => void) {
+  listeners.add(listener)
+  return () => { listeners.delete(listener) }
+}
 let unsub: (() => void) | null = null
 
 /** True while the app is shown over a locked phone's lock screen. */
 export const lockView = (): boolean => on
+export const useLockView = () => useSyncExternalStore(subscribeLockView, lockView)
 
 /** Ask Android for the unlock screen (PIN, pattern, fingerprint). Nothing happens on its own: the user taps again. */
 export function askUnlock(why = 'Unlock the phone first'): void {
@@ -64,6 +71,7 @@ declare global {
 
 window.hermesLockView = (v: boolean) => {
   on = Boolean(v)
+  listeners.forEach(listener => listener())
   unsub?.()
   unsub = null
   if (!on) return

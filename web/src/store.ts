@@ -117,7 +117,7 @@ export interface Ctx {
 
 export type Sheet = null | 'model' | 'commands' | 'session-actions' | 'chat-menu' | 'draft-menu' | 'status' | 'rollback' | 'context'
 
-export type Screen = null | 'chats' | 'skills' | 'memory' | 'cron' | 'files' | 'projects' | 'settings' | 'bots' | 'setup' | 'hub' | 'welcome' | 'gallery' | 'cad'
+export type Screen = null | 'home' | 'work' | 'knowledge' | 'more' | 'models' | 'providers' | 'chats' | 'skills' | 'memory' | 'cron' | 'files' | 'projects' | 'settings' | 'bots' | 'setup' | 'hub' | 'welcome' | 'gallery'
 
 export interface Toast {
   id: number
@@ -143,7 +143,7 @@ export interface AppState {
   screen: Screen
   /** Profile a Settings screen opens scoped to (from a bot's page); null = the current one. */
   screenProfile: string | null
-  /** Where Back from `screen` goes (the Hermes hub opened it); null = the chat. */
+  /** Where Back from `screen` goes when another page opened it. */
   screenBack: Screen
   toasts: Toast[]
   textScale: number
@@ -380,5 +380,6 @@ export function addsToScreen(fresh: ChatItem[], shown: ChatItem[]): boolean {
 /** Close the open full screen: back to the hub when it opened it, else to the chat. */
 export function closeScreen(): void {
   const s = getState()
-  setState({ screen: s.screen !== s.screenBack ? s.screenBack : null, screenBack: null })
+  const root = s.screen === 'work' || s.screen === 'knowledge' || s.screen === 'more'
+  setState({ screen: s.screenBack && s.screen !== s.screenBack ? s.screenBack : root ? 'home' : null, screenBack: null })
 }

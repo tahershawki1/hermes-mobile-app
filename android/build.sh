@@ -82,7 +82,7 @@ s = s.replace('android:label="@string/app_name"', 'android:label="Hermes Taher"'
 Path(sys.argv[1]).write_text(s)
 PY
   if [ "${HM_APP_VARIANT:-}" = "taher-test" ]; then
-    sed -i "s/com.tahershawki.hermesmobile.camera/com.tahershawki.hermesmobile.test.camera/g; s/com.tahershawki.hermesmobile.shizuku/com.tahershawki.hermesmobile.test.shizuku/g" "$MANIFEST"
+    sed -i "s/com.tahershawki.hermesmobile.camera/com.tahershawki.hermesmobile.test.camera/g; s/com.tahershawki.hermesmobile.shizuku/com.tahershawki.hermesmobile.test.shizuku/g; s/android:label=\"Hermes Taher\"/android:label=\"Hermes Taher Preview\"/g" "$MANIFEST"
     RENAME_ARGS=(--rename-manifest-package com.tahershawki.hermesmobile.test)
   else
     RENAME_ARGS=(--rename-manifest-package com.tahershawki.hermesmobile)
