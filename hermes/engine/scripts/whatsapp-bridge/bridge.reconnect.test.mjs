@@ -100,21 +100,23 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 }
 
 // A fetch that never settles resolves within the timeout bound instead of
-// pending forever; before any success there is no cache, so the resolver
-// yields null (callers fall back to the Baileys default).
+// pending forever; subsequent reconnects reuse the Baileys default rather
+// than repeating the slow network lookup.
 {
   const logs = [];
+  let calls = 0;
   const resolveVersion = createVersionResolver(
-    () => new Promise(() => {}),
+    () => { calls += 1; return new Promise(() => {}); },
     { timeoutMs: 20, log: line => logs.push(line) },
   );
   assert.equal(await resolveVersion(), null);
+  assert.equal(await resolveVersion(), null);
+  assert.equal(calls, 1);
   assert.equal(logs.length, 1);
 }
 
-// After one success, later failures fall back to the cached version.
+// A successful lookup is also reused across reconnects without another request.
 {
-  const logs = [];
   let calls = 0;
   const resolveVersion = createVersionResolver(
     async () => {
@@ -122,12 +124,11 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
       if (calls === 1) return { version: [2, 3000, 42] };
       throw new Error('network down');
     },
-    { timeoutMs: 20, log: line => logs.push(line) },
+    { timeoutMs: 20, log: () => {} },
   );
   assert.deepEqual(await resolveVersion(), [2, 3000, 42]);
   assert.deepEqual(await resolveVersion(), [2, 3000, 42]);
-  assert.equal(logs.length, 1);
-  assert.match(logs[0], /network down/);
+  assert.equal(calls, 1);
 }
 
 console.log('bridge.reconnect.test.mjs: all assertions passed');
