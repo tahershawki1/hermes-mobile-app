@@ -1,12 +1,12 @@
 # Hermes Go parity — Phase 2
 
-Phase 1 is accepted. Its two follow-up fixes are implemented locally and covered by the `15-gestures.cjs` browser check. **Feature transfer is paused while the remaining interface polish is built and reviewed.** The user canceled multi-server support and Hermes Cloud; those are removed from this plan. Do not resume this phase until the user approves the UI preview.
+Phase 1 is accepted. Its two follow-up fixes are implemented and covered by the `15-gestures.cjs` browser check. The wide-screen interface polish has a separate local preview and draft PR. At the user's direction, feature transfer has resumed. Multi-server support and Hermes Cloud are canceled and excluded from this plan.
 
 Phase 2 follows the order of the Go-only feature inventory in `comparison-full-ar.md`. Each item stays in progress until the feature has an implementation, a practical check against a running Hermes endpoint (or a documented reason a real endpoint is required), a local APK preview, and user review. After each check, update this order if evidence changes the priority or reveals a dependency.
 
 | Order | Feature group | Practical acceptance check | State |
 |---:|---|---|---|
-| 1 | Messaging channel status and configuration. | Use a test Telegram/Discord channel; verify status, credentials handling, test and restart without exposing secrets. | Paused |
+| 1 | Messaging channel status and configuration. | Use a test Telegram/Discord channel; verify status, credentials handling, test and restart without exposing secrets. | Implemented; mock E2E passed; live device check pending |
 | 2 | Webhook routes and lifecycle. | Create a test route, deliver a sample event, disable and delete it. | Paused |
 | 3 | Gateway pairing and QR provisioning. | Pair a disposable test account/device and verify accept/reject paths. | Paused |
 | 4 | Remote host health/status dashboard. | Compare app status to the selected test host and verify offline/error states. | Paused |
