@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
-import { api } from '../api'
+import { api, ApiError } from '../api'
 import { haptic } from '../bridge'
 import { confirmDialog } from '../dialog'
 import { navigationText } from '../navigation'
@@ -111,7 +111,13 @@ export function MessagingScreen() {
         if (state.account_phone) setLinkedPhone(state.account_phone)
         if (['installing', 'starting', 'waiting'].includes(state.status)) timer = window.setTimeout(() => void poll(), 1200)
       } catch (e) {
-        if (active) setWhatsApp(current => current ? { ...current, status: 'error', error: e instanceof Error ? e.message : String(e) } : current)
+        if (active) setWhatsApp(current => current ? {
+          ...current,
+          status: 'error',
+          error: e instanceof ApiError && e.status === 404
+            ? navigationText('This WhatsApp setup session is no longer active. Start a new setup.', 'انتهت جلسة ربط واتساب الحالية. ابدأ إعدادًا جديدًا.')
+            : e instanceof Error ? e.message : String(e),
+        } : current)
       }
     }
     timer = window.setTimeout(() => void poll(), 1000)
@@ -133,7 +139,7 @@ export function MessagingScreen() {
     let active = true
     setWhatsAppQrImage('')
     if (!whatsapp?.qr_payload) return () => { active = false }
-    void QRCode.toDataURL(whatsapp.qr_payload, { width: 512, margin: 1, errorCorrectionLevel: 'M' })
+    void QRCode.toDataURL(whatsapp.qr_payload, { errorCorrectionLevel: 'M', margin: 2, width: 240 })
       .then(image => { if (active) setWhatsAppQrImage(image) })
       .catch(() => { if (active) setWhatsAppQrImage('') })
     return () => { active = false }
@@ -163,7 +169,8 @@ export function MessagingScreen() {
       await api('DELETE', `/api/messaging/whatsapp/onboarding/${encodeURIComponent(whatsapp.pairing_id)}`)
       setWhatsApp(null)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e), 'error')
+      if (e instanceof ApiError && e.status === 404) setWhatsApp(null)
+      else toast(e instanceof Error ? e.message : String(e), 'error')
     } finally {
       setBusy('')
     }
@@ -342,19 +349,22 @@ export function MessagingScreen() {
                   </>}
                   {whatsapp && <div className="hm-whatsapp-pairing" role="status">
                     {whatsapp.status === 'waiting' && whatsapp.pairing_code && <div className="hm-whatsapp-code" dir="ltr" aria-label={navigationText('WhatsApp pairing code', 'رمز ربط واتساب')}>{whatsapp.pairing_code}</div>}
-                    {whatsapp.status === 'waiting' && whatsapp.pairing_method === 'qr' && whatsappQrImage && <img className="hm-whatsapp-qr" src={whatsappQrImage} alt={navigationText('WhatsApp linking QR code', 'رمز QR لربط واتساب')} />}
+                    {whatsapp.status === 'waiting' && whatsapp.qr_payload && whatsappQrImage && <img className="hm-whatsapp-qr" src={whatsappQrImage} alt={navigationText('WhatsApp linking QR code', 'رمز QR لربط واتساب')} />}
                     {whatsapp.status === 'installing' && <p>{navigationText('Preparing the WhatsApp bridge. The first setup can take a little longer.', 'جارٍ تجهيز جسر واتساب. قد يستغرق الإعداد الأول بعض الوقت.')}</p>}
                     {whatsapp.status === 'starting' && <p>{whatsapp.pairing_method === 'qr' ? navigationText('Connecting to WhatsApp and preparing a QR code…', 'جارٍ الاتصال بواتساب وتجهيز رمز QR…') : navigationText('Asking the Hermes engine for a link code…', 'جارٍ طلب رمز الربط من محرك هيرمس…')}</p>}
                     {whatsapp.status === 'waiting' && whatsapp.pairing_code && <p>{navigationText('In WhatsApp, open Linked devices → Link a device → Link with phone number instead, then enter this code.', 'في واتساب افتح الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف بدلاً من ذلك، ثم أدخل هذا الرمز.')}</p>}
                     {whatsapp.status === 'waiting' && whatsapp.pairing_method === 'qr' && !whatsapp.qr_payload && <p>{navigationText('Waiting for the QR code from the Hermes engine…', 'بانتظار رمز QR من محرك هيرمس…')}</p>}
                     {whatsapp.status === 'waiting' && whatsapp.pairing_method === 'phone' && !whatsapp.pairing_code && <p>{navigationText('Waiting for the link code from the Hermes engine…', 'بانتظار رمز الربط من محرك هيرمس…')}</p>}
-                    {whatsapp.status === 'waiting' && whatsapp.pairing_method === 'qr' && whatsapp.qr_payload && <p>{navigationText('In WhatsApp, open Linked devices → Link a device and scan this QR code.', 'في واتساب افتح الأجهزة المرتبطة ← ربط جهاز ثم امسح رمز QR هذا.')}</p>}
+                    {whatsapp.status === 'waiting' && whatsapp.qr_payload && <p>{navigationText('In WhatsApp, open Linked devices → Link a device and scan this QR code.', 'في واتساب افتح الأجهزة المرتبطة ← ربط جهاز ثم امسح رمز QR هذا.')}</p>}
                     {whatsapp.status === 'connected' && !whatsapp.error && <p className="hm-whatsapp-connected">{navigationText('Code accepted. Saving the connection…', 'تم قبول الرمز. جارٍ حفظ الاتصال…')}</p>}
                     {whatsapp.status === 'connected' && whatsapp.error && <>
                       <p className="hm-channel-error">{whatsapp.error}</p>
                       <button className="btn primary" disabled={busy === 'whatsapp-apply'} onClick={() => void applyWhatsAppLink()}>{busy === 'whatsapp-apply' ? navigationText('Saving…', 'جارٍ الحفظ…') : navigationText('Retry', 'إعادة المحاولة')}</button>
                     </>}
-                    {(whatsapp.status === 'error' || whatsapp.status === 'expired') && <p className="hm-channel-error">{whatsapp.error || navigationText('WhatsApp pairing failed or expired. Start again.', 'فشل ربط واتساب أو انتهت صلاحيته. ابدأ من جديد.')}</p>}
+                    {(whatsapp.status === 'error' || whatsapp.status === 'expired') && <>
+                      <p className="hm-channel-error">{whatsapp.error || navigationText('WhatsApp pairing failed or expired. Start again.', 'فشل ربط واتساب أو انتهت صلاحيته. ابدأ من جديد.')}</p>
+                      <button className="btn primary" disabled={busy === 'whatsapp-link'} onClick={() => void startWhatsAppLink()}>{busy === 'whatsapp-link' ? navigationText('Starting…', 'جارٍ البدء…') : navigationText(whatsapp.pairing_method === 'qr' ? 'Start new QR setup' : 'Request a new code', whatsapp.pairing_method === 'qr' ? 'بدء إعداد QR جديد' : 'طلب رمز جديد')}</button>
+                    </>}
                     {whatsapp.status !== 'connected' && <button className="btn" disabled={busy === 'whatsapp-cancel'} onClick={() => void cancelWhatsAppLink()}>{busy === 'whatsapp-cancel' ? navigationText('Cancelling…', 'جارٍ الإلغاء…') : navigationText('Cancel', 'إلغاء')}</button>}
                   </div>}
                 </section>}
