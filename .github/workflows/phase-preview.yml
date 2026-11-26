@@ -35,7 +35,18 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Install Android SDK packages
-        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+        run: |
+          if [ -f "$ANDROID_HOME/platforms/android-36/android.jar" ] && [ -x "$ANDROID_HOME/build-tools/35.0.0/aapt2" ]; then exit 0; fi
+          manager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$manager" ]; then
+            curl -fLsS --retry 2 https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -o "$RUNNER_TEMP/sdk-tools.zip"
+            unzip -q "$RUNNER_TEMP/sdk-tools.zip" -d "$RUNNER_TEMP/sdk-tools"
+            manager="$RUNNER_TEMP/sdk-tools/cmdline-tools/bin/sdkmanager"
+          fi
+          set +o pipefail
+          yes | "$manager" --sdk_root="$ANDROID_HOME" --licenses >/dev/null
+          set -o pipefail
+          "$manager" --sdk_root="$ANDROID_HOME" 'platforms;android-36' 'build-tools;35.0.0'
       - name: Build WebView UI
         working-directory: web
         run: |
