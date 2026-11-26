@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
-import QRCode from 'qrcode'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import { haptic } from '../bridge'
 import { confirmDialog } from '../dialog'
@@ -77,11 +76,9 @@ export function MessagingScreen() {
   const [tests, setTests] = useState<Record<string, PlatformTest>>({})
   const [restartNeeded, setRestartNeeded] = useState(false)
   const [whatsapp, setWhatsApp] = useState<WhatsAppSetupState | null>(null)
-  const [whatsappQr, setWhatsAppQr] = useState('')
-  const [whatsappMode, setWhatsAppMode] = useState<'bot' | 'self-chat'>('bot')
-  const [whatsappPairingMethod, setWhatsAppPairingMethod] = useState<'phone' | 'qr'>('phone')
   const [whatsappPhone, setWhatsAppPhone] = useState('')
   const [linkedPhone, setLinkedPhone] = useState('')
+  const appliedWhatsAppPairing = useRef('')
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -118,21 +115,11 @@ export function MessagingScreen() {
     return () => { active = false; if (timer) window.clearTimeout(timer) }
   }, [whatsapp?.pairing_id, whatsapp?.status])
 
-  useEffect(() => {
-    let active = true
-    if (!whatsapp?.qr_payload || whatsapp.status !== 'waiting') { setWhatsAppQr(''); return }
-    void QRCode.toDataURL(whatsapp.qr_payload, { errorCorrectionLevel: 'M', margin: 2, width: 240 })
-      .then(url => { if (active) setWhatsAppQr(url) })
-      .catch(e => { if (active) setWhatsApp(previous => previous ? { ...previous, error: e instanceof Error ? e.message : String(e) } : previous) })
-    return () => { active = false }
-  }, [whatsapp?.qr_payload, whatsapp?.status])
-
   const startWhatsAppLink = async (resetSession = false) => {
     setBusy('whatsapp-link')
     try {
       const state = await api<WhatsAppSetupState>('POST', '/api/messaging/whatsapp/onboarding/start', {
-        mode: whatsappMode, pairing_method: whatsappPairingMethod,
-        phone_number: whatsappPairingMethod === 'phone' ? whatsappPhone : undefined,
+        mode: 'bot', pairing_method: 'phone', phone_number: whatsappPhone,
         allowed_users: '', reset_session: resetSession
       })
       setWhatsApp(state)
@@ -150,7 +137,6 @@ export function MessagingScreen() {
     try {
       await api('DELETE', `/api/messaging/whatsapp/onboarding/${encodeURIComponent(whatsapp.pairing_id)}`)
       setWhatsApp(null)
-      setWhatsAppQr('')
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), 'error')
     } finally {
@@ -164,11 +150,10 @@ export function MessagingScreen() {
     try {
       const result = await api<{ restart_started?: boolean; needs_restart?: boolean; restart_error?: string | null }>(
         'POST', `/api/messaging/whatsapp/onboarding/${encodeURIComponent(whatsapp.pairing_id)}/apply`,
-        { mode: whatsappMode }
+        { mode: 'bot' }
       )
       if (whatsapp.account_phone) setLinkedPhone(whatsapp.account_phone)
       setWhatsApp(null)
-      setWhatsAppQr('')
       setRestartNeeded(Boolean(result.needs_restart || !result.restart_started))
       toast(result.restart_started ? navigationText('WhatsApp phone linked; gateway restart started.', 'تم ربط رقم واتساب وبدأت إعادة تشغيل البوابة.') : result.restart_error || navigationText('Phone linked. Restart the gateway to apply.', 'تم ربط الرقم. أعد تشغيل البوابة للتطبيق.'), 'info')
       await refresh()
@@ -179,6 +164,37 @@ export function MessagingScreen() {
       setBusy('')
     }
   }
+
+  useEffect(() => {
+    const session = whatsapp
+    if (session?.status !== 'connected' || !session.pairing_id || appliedWhatsAppPairing.current === session.pairing_id) return
+    appliedWhatsAppPairing.current = session.pairing_id
+    let active = true
+    setBusy('whatsapp-apply')
+    void (async () => {
+      try {
+        const result = await api<{ restart_started?: boolean; needs_restart?: boolean; restart_error?: string | null }>(
+          'POST', `/api/messaging/whatsapp/onboarding/${encodeURIComponent(session.pairing_id)}/apply`, { mode: 'bot' }
+        )
+        if (!active) return
+        if (session.account_phone) setLinkedPhone(session.account_phone)
+        setWhatsApp(null)
+        setRestartNeeded(Boolean(result.needs_restart || !result.restart_started))
+        toast(result.restart_started ? navigationText('WhatsApp connected.', 'تم ربط واتساب بنجاح.') : result.restart_error || navigationText('WhatsApp linked. Restart Hermes to apply.', 'تم الربط. أعد تشغيل هيرمس للتطبيق.'), result.restart_started ? 'info' : 'error')
+        await refresh()
+        if (result.restart_started) window.setTimeout(() => void refresh(), 5000)
+      } catch (e) {
+        if (active) {
+          appliedWhatsAppPairing.current = ''
+          setWhatsApp(current => current ? { ...current, error: e instanceof Error ? e.message : String(e) } : current)
+          toast(e instanceof Error ? e.message : String(e), 'error')
+        }
+      } finally {
+        if (active) setBusy('')
+      }
+    })()
+    return () => { active = false }
+  }, [whatsapp?.pairing_id, whatsapp?.status])
 
   const setDraft = (platform: string, key: string, value: string) => {
     setDrafts(current => ({ ...current, [platform]: { ...(current[platform] || {}), [key]: value } }))
@@ -269,59 +285,44 @@ export function MessagingScreen() {
                   <span><strong>{platform.name}</strong><small>{platform.description}</small></span>
                   <ChannelState platform={platform} />
                 </button>
-                <button className="btn" disabled={busy === `toggle:${platform.id}`} onClick={() => void toggle(platform)}>{busy === `toggle:${platform.id}` ? navigationText('Saving…', 'جارٍ الحفظ…') : platform.enabled ? navigationText('Turn off', 'إيقاف') : navigationText('Turn on', 'تشغيل')}</button>
+                {platform.id !== 'whatsapp' && <button className="btn" disabled={busy === `toggle:${platform.id}`} onClick={() => void toggle(platform)}>{busy === `toggle:${platform.id}` ? navigationText('Saving…', 'جارٍ الحفظ…') : platform.enabled ? navigationText('Turn off', 'إيقاف') : navigationText('Turn on', 'تشغيل')}</button>}
               </div>
               {platform.error_message && <p className="hm-channel-error">{platform.error_message}</p>}
               {expanded && <div className="hm-channel-details">
                 {platform.id === 'whatsapp' && <section className="hm-whatsapp-link" aria-label={navigationText('Link a WhatsApp phone', 'ربط رقم واتساب')}>
                   <div className="hm-whatsapp-link-head">
-                    <strong>{navigationText('Connect a phone number', 'ربط رقم الهاتف')}</strong>
-                    <p>{navigationText('Link WhatsApp by entering your phone number and typing the generated code in Linked devices. QR remains available as an alternative.', 'اربط واتساب بإدخال رقم الهاتف ثم كتابة الرمز الناتج في الأجهزة المرتبطة. ويمكنك استخدام QR كطريقة بديلة.')}</p>
+                    <strong>{navigationText('Connect WhatsApp', 'ربط واتساب')}</strong>
+                    <p>{navigationText('Enter your WhatsApp number. Hermes will show a code; enter it in WhatsApp to approve the connection.', 'أدخل رقم واتساب. سيعرض هيرمس رمزًا؛ أدخله في تطبيق واتساب لتأكيد الاتصال.')}</p>
                   </div>
                   {linkedPhone && <div className="hm-whatsapp-phone"><span>{navigationText('Linked phone', 'الهاتف المرتبط')}</span><bdi dir="ltr">{linkedPhone}</bdi></div>}
                   {!whatsapp && <>
                     <label className="hm-channel-field">
-                      <span className="hm-channel-field-title">{navigationText('Pairing method', 'طريقة الربط')}</span>
-                      <select className="sheet-input" value={whatsappPairingMethod} onChange={e => setWhatsAppPairingMethod(e.target.value as 'phone' | 'qr')}>
-                        <option value="phone">{navigationText('Phone number and code', 'رقم الهاتف ورمز الربط')}</option>
-                        <option value="qr">{navigationText('QR code', 'رمز QR')}</option>
-                      </select>
-                    </label>
-                    {whatsappPairingMethod === 'phone' && <label className="hm-channel-field">
-                      <span className="hm-channel-field-title">{navigationText('WhatsApp phone number with country code', 'رقم واتساب مع مفتاح الدولة')}</span>
+                      <span className="hm-channel-field-title">{navigationText('Phone number with country code', 'رقم الهاتف مع مفتاح الدولة')}</span>
                       <input className="sheet-input" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="+201234567890" value={whatsappPhone} onChange={e => setWhatsAppPhone(e.target.value)} />
-                    </label>}
-                    <label className="hm-channel-field">
-                      <span className="hm-channel-field-title">{navigationText('Connection mode', 'طريقة الاتصال')}</span>
-                      <select className="sheet-input" value={whatsappMode} onChange={e => setWhatsAppMode(e.target.value as 'bot' | 'self-chat')}>
-                        <option value="bot">{navigationText('Bot — receive messages from allowed contacts', 'بوت — استقبال الرسائل من جهات الاتصال المسموح بها')}</option>
-                        <option value="self-chat">{navigationText('Self-chat — use this linked phone for your own chats', 'محادثة ذاتية — استخدام الهاتف المرتبط لمحادثاتك')}</option>
-                      </select>
                     </label>
                     <div className="hm-channel-actions">
-                      <button className="btn primary" disabled={busy === 'whatsapp-link' || (whatsappPairingMethod === 'phone' && whatsappPhone.replace(/\D/g, '').length < 8)} onClick={() => void startWhatsAppLink()}>{busy === 'whatsapp-link' ? navigationText('Starting…', 'جارٍ البدء…') : navigationText(linkedPhone ? 'Link another phone' : 'Link WhatsApp phone', linkedPhone ? 'ربط هاتف آخر' : 'ربط هاتف واتساب')}</button>
-                      {linkedPhone && <button className="btn" disabled={busy === 'whatsapp-link'} onClick={async () => {
-                        if (await confirmDialog({ title: navigationText('Replace linked phone?', 'استبدال الهاتف المرتبط؟'), message: navigationText('Hermes will back up the current WhatsApp session before linking another phone.', 'سيحفظ Hermes نسخة من جلسة واتساب الحالية قبل ربط هاتف آخر.'), confirmLabel: navigationText('Continue', 'متابعة') })) void startWhatsAppLink(true)
-                      }}>{navigationText('Change number', 'تغيير الرقم')}</button>}
+                      <button className="btn primary" disabled={busy === 'whatsapp-link' || whatsappPhone.replace(/\D/g, '').length < 8} onClick={async () => {
+                        if (linkedPhone) {
+                          if (await confirmDialog({ title: navigationText('Change WhatsApp number?', 'تغيير رقم واتساب؟'), message: navigationText('Hermes will back up the current WhatsApp link before replacing it.', 'سيحفظ هيرمس نسخة من ربط واتساب الحالي قبل استبداله.'), confirmLabel: navigationText('Continue', 'متابعة') })) void startWhatsAppLink(true)
+                        } else void startWhatsAppLink()
+                      }}>{busy === 'whatsapp-link' ? navigationText('Requesting code…', 'جارٍ طلب الرمز…') : navigationText(linkedPhone ? 'Change number' : 'Link WhatsApp', linkedPhone ? 'تغيير الرقم' : 'ربط واتساب')}</button>
                     </div>
                   </>}
                   {whatsapp && <div className="hm-whatsapp-pairing" role="status">
                     {whatsapp.status === 'waiting' && whatsapp.pairing_code && <div className="hm-whatsapp-code" dir="ltr" aria-label={navigationText('WhatsApp pairing code', 'رمز ربط واتساب')}>{whatsapp.pairing_code}</div>}
-                    {whatsapp.status === 'waiting' && !whatsapp.pairing_code && whatsappQr && <img className="hm-whatsapp-qr" src={whatsappQr} alt={navigationText('WhatsApp linking QR code', 'رمز QR لربط واتساب')} />}
-                    {whatsapp.status === 'starting' && <p>{navigationText('Starting the WhatsApp bridge…', 'جارٍ تشغيل جسر واتساب…')}</p>}
-                    {whatsapp.status === 'waiting' && whatsapp.pairing_code && <p>{navigationText('On your phone, open WhatsApp → Linked devices → Link a device → Link with phone number instead, then enter this code.', 'على هاتفك افتح واتساب ← الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف بدلاً من ذلك، ثم أدخل هذا الرمز.')}</p>}
-                    {whatsapp.status === 'waiting' && !whatsapp.pairing_code && <p>{navigationText('Open WhatsApp on the phone you want to link, then choose Linked devices → Link a device and scan this code.', 'افتح واتساب على الهاتف الذي تريد ربطه، ثم اختر الأجهزة المرتبطة ← ربط جهاز وامسح الرمز.')}</p>}
-                    {whatsapp.status === 'connected' && <p className="hm-whatsapp-connected">{navigationText('Phone connected', 'تم اتصال الهاتف')}</p>}
+                    {whatsapp.status === 'starting' && <p>{navigationText('Requesting a WhatsApp connection code…', 'جارٍ طلب رمز ربط واتساب…')}</p>}
+                    {whatsapp.status === 'waiting' && whatsapp.pairing_code && <p>{navigationText('In WhatsApp, open Linked devices → Link a device → Link with phone number instead, then enter this code.', 'في واتساب افتح الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف بدلاً من ذلك، ثم أدخل هذا الرمز.')}</p>}
+                    {whatsapp.status === 'waiting' && !whatsapp.pairing_code && <p>{navigationText('Waiting for WhatsApp to provide the connection code…', 'بانتظار رمز الاتصال من واتساب…')}</p>}
+                    {whatsapp.status === 'connected' && !whatsapp.error && <p className="hm-whatsapp-connected">{navigationText('Code accepted. Saving the connection…', 'تم قبول الرمز. جارٍ حفظ الاتصال…')}</p>}
+                    {whatsapp.status === 'connected' && whatsapp.error && <>
+                      <p className="hm-channel-error">{whatsapp.error}</p>
+                      <button className="btn primary" disabled={busy === 'whatsapp-apply'} onClick={() => void applyWhatsAppLink()}>{busy === 'whatsapp-apply' ? navigationText('Saving…', 'جارٍ الحفظ…') : navigationText('Retry', 'إعادة المحاولة')}</button>
+                    </>}
                     {(whatsapp.status === 'error' || whatsapp.status === 'expired') && <p className="hm-channel-error">{whatsapp.error || navigationText('WhatsApp pairing failed or expired. Start again.', 'فشل ربط واتساب أو انتهت صلاحيته. ابدأ من جديد.')}</p>}
-                    {whatsapp.status === 'connected' && <div className="hm-channel-actions">
-                      <button className="btn primary" disabled={busy === 'whatsapp-apply'} onClick={() => void applyWhatsAppLink()}>{busy === 'whatsapp-apply' ? navigationText('Saving and restarting…', 'جارٍ الحفظ وإعادة التشغيل…') : navigationText('Save and connect', 'حفظ والاتصال')}</button>
-                      {whatsapp.account_phone && <button className="btn" disabled={busy === 'whatsapp-link'} onClick={async () => {
-                        if (await confirmDialog({ title: navigationText('Replace linked phone?', 'استبدال الهاتف المرتبط؟'), message: navigationText('Hermes will back up the current WhatsApp session before linking another phone.', 'سيحفظ Hermes نسخة من جلسة واتساب الحالية قبل ربط هاتف آخر.'), confirmLabel: navigationText('Continue', 'متابعة') })) void startWhatsAppLink(true)
-                      }}>{navigationText('Change number', 'تغيير الرقم')}</button>}
-                    </div>}
                     {whatsapp.status !== 'connected' && <button className="btn" disabled={busy === 'whatsapp-cancel'} onClick={() => void cancelWhatsAppLink()}>{busy === 'whatsapp-cancel' ? navigationText('Cancelling…', 'جارٍ الإلغاء…') : navigationText('Cancel', 'إلغاء')}</button>}
                   </div>}
                 </section>}
+                {platform.id !== 'whatsapp' && <>
                 {platform.env_vars.map(field => {
                   const value = draft[field.key] ?? (field.is_list ? field.value || '' : '')
                   const cleared = clear.includes(field.key)
@@ -348,6 +349,7 @@ export function MessagingScreen() {
                   <button className="btn" disabled={busy === `test:${platform.id}`} onClick={() => void test(platform)}>{busy === `test:${platform.id}` ? navigationText('Testing…', 'جارٍ الاختبار…') : navigationText('Test connection', 'اختبار الاتصال')}</button>
                   {platform.docs_url && <a className="btn" href={platform.docs_url} target="_blank" rel="noreferrer">{navigationText('Setup guide', 'دليل الإعداد')}</a>}
                 </div>
+                </>}
               </div>}
             </article>
           })}
