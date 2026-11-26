@@ -9,6 +9,9 @@
   --accent: #d9a441;
   --accent-2: #cd7f32;
   --accent-ink: #1a1307;
+  --accent-soft: #2a2418;
+  --accent-edge: #5a4826;
+  --focus-ring: var(--accent);
   --ok: #57c28a;
   --warn: #e0b341;
   --err: #ec6a5e;
@@ -62,6 +65,10 @@ button {
 }
 button:disabled {
   opacity: 0.4;
+}
+button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 input,
 textarea {
@@ -1779,14 +1786,21 @@ textarea {
 .screen.takeover {
   z-index: 22;
 }
+.screen > .topbar {
+  width: min(100%, 760px);
+  margin-inline: auto;
+  padding-inline: 18px;
+}
 .screen-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 10px 12px 28px;
+  width: min(100%, 760px);
+  margin-inline: auto;
+  padding: 14px 18px 28px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 .screen-body > * {
   flex-shrink: 0;
@@ -2669,6 +2683,8 @@ button.set-row:active, .toggle-row:active { background: var(--press); }
   --accent: #b57a10;
   --accent-2: #9a5f0b;
   --accent-ink: #ffffff;
+  --accent-soft: #f8f0dd;
+  --accent-edge: #e7d3a4;
   --ok: #1d8a56;
   --warn: #9a6b00;
   --err: #c9372c;

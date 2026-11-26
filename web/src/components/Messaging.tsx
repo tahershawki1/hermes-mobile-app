@@ -5,6 +5,7 @@ import { haptic } from '../bridge'
 import { confirmDialog } from '../dialog'
 import { navigationText } from '../navigation'
 import { toast, useStore } from '../store'
+import { SelectRow } from './ui'
 import { LoadError, ScreenShell, Status } from './Screens'
 
 type MessagingField = {
@@ -280,24 +281,18 @@ export function MessagingScreen() {
                   </div>
                   {linkedPhone && <div className="hm-whatsapp-phone"><span>{navigationText('Linked phone', 'الهاتف المرتبط')}</span><bdi dir="ltr">{linkedPhone}</bdi></div>}
                   {!whatsapp && <>
-                    <label className="hm-channel-field">
-                      <span className="hm-channel-field-title">{navigationText('Pairing method', 'طريقة الربط')}</span>
-                      <select className="sheet-input" value={whatsappPairingMethod} onChange={e => setWhatsAppPairingMethod(e.target.value as 'phone' | 'qr')}>
-                        <option value="phone">{navigationText('Phone number and code', 'رقم الهاتف ورمز الربط')}</option>
-                        <option value="qr">{navigationText('QR code', 'رمز QR')}</option>
-                      </select>
-                    </label>
+                    <SelectRow title={navigationText('Pairing method', 'طريقة الربط')} options={[
+                      { value: 'phone', label: navigationText('Phone number and code', 'رقم الهاتف ورمز الربط') },
+                      { value: 'qr', label: navigationText('QR code', 'رمز QR') }
+                    ]} value={whatsappPairingMethod} onChange={value => setWhatsAppPairingMethod(value as 'phone' | 'qr')} />
                     {whatsappPairingMethod === 'phone' && <label className="hm-channel-field">
                       <span className="hm-channel-field-title">{navigationText('WhatsApp phone number with country code', 'رقم واتساب مع مفتاح الدولة')}</span>
                       <input className="sheet-input" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="+201234567890" value={whatsappPhone} onChange={e => setWhatsAppPhone(e.target.value)} />
                     </label>}
-                    <label className="hm-channel-field">
-                      <span className="hm-channel-field-title">{navigationText('Connection mode', 'طريقة الاتصال')}</span>
-                      <select className="sheet-input" value={whatsappMode} onChange={e => setWhatsAppMode(e.target.value as 'bot' | 'self-chat')}>
-                        <option value="bot">{navigationText('Bot — receive messages from allowed contacts', 'بوت — استقبال الرسائل من جهات الاتصال المسموح بها')}</option>
-                        <option value="self-chat">{navigationText('Self-chat — use this linked phone for your own chats', 'محادثة ذاتية — استخدام الهاتف المرتبط لمحادثاتك')}</option>
-                      </select>
-                    </label>
+                    <SelectRow title={navigationText('Connection mode', 'طريقة الاتصال')} options={[
+                      { value: 'bot', label: navigationText('Bot — receive messages from allowed contacts', 'بوت — استقبال الرسائل من جهات الاتصال المسموح بها') },
+                      { value: 'self-chat', label: navigationText('Self-chat — use this linked phone for your own chats', 'محادثة ذاتية — استخدام الهاتف المرتبط لمحادثاتك') }
+                    ]} value={whatsappMode} onChange={value => setWhatsAppMode(value as 'bot' | 'self-chat')} />
                     <div className="hm-channel-actions">
                       <button className="btn primary" disabled={busy === 'whatsapp-link' || (whatsappPairingMethod === 'phone' && whatsappPhone.replace(/\D/g, '').length < 8)} onClick={() => void startWhatsAppLink()}>{busy === 'whatsapp-link' ? navigationText('Starting…', 'جارٍ البدء…') : navigationText(linkedPhone ? 'Link another phone' : 'Link WhatsApp phone', linkedPhone ? 'ربط هاتف آخر' : 'ربط هاتف واتساب')}</button>
                       {linkedPhone && <button className="btn" disabled={busy === 'whatsapp-link'} onClick={async () => {

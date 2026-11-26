@@ -2,7 +2,7 @@
 
 The page is one React tree (`web/src/App.tsx` `App`). There are no URLs or router. What is on screen is decided by a few fields of the store (`web/src/store.ts` `AppState`):
 
-The primary navigation uses a blue accent in both dark and light themes (`web/src/components/Navigation.css`). On phones, the sessions drawer opens with a rightward swipe from chat and closes with a leftward swipe from its backdrop or inside its list; long row swipes close the drawer while shorter row swipes remain available for archive and delete.
+The primary navigation and destination cards use the warm gold accent from the shared theme tokens in `web/src/styles.css`; the same focus ring is used for keyboard navigation in both dark and light themes. On phones, the sessions drawer opens with a rightward swipe from chat and closes with a leftward swipe from its backdrop or inside its list; long row swipes close the drawer while shorter row swipes remain available for archive and delete.
 
 - `screen` (type `Screen`): a full-screen page drawn over the chat. `null` means the chat itself.
 - `sheet` (type `Sheet`): one bottom sheet owned by the chat area.
@@ -172,12 +172,14 @@ Top to bottom in the DOM, which is also the paint order: `Header`, `ConnBanner`,
 
 `PrimaryNavigation` (`Navigation.tsx`) is the bottom bar for the chat and the five main destinations. `openDestination` (`navigation.ts`) changes the screen and captures its Back destination without recreating the current chat. A cold open still restores the last chat or the setup flow. The bar disappears in the setup flow, in subpages, when the phone is locked, while an overlay drawer is open, or while Canvas covers the chat. On wide screens it sits beside the docked chat list. The new labels and horizontal order follow Arabic WebView locales (`arabicNavigation`, `navigationText`). Conversation text retains its existing direction preferences.
 
+The bar's order in left-to-right locales is Home, Work, Knowledge, Sessions, More; RTL locales mirror the same sequence. The selected destination uses the shared gold accent.
+
 | Navigation item | Screen or action |
 |---|---|
 | Home (`home`) | `WorkspaceHome` shows the existing backend health state for local Hermes, opens `Backend status` through **Status details**, and offers Reconnect when offline. **New chat** starts a draft; **Continue chat** reveals the current conversation or draft. Recent chats and **View all** link to stored sessions. |
 | Sessions (`chats`) | `ChatHome` uses the existing search, pinned order and archive list. **Projects** opens the existing project screen, with Back returning to Sessions. |
 | Work (`work`) | `WorkspaceSection` lists Scheduled jobs, Files, Projects, Canvas gallery. Each opens the existing screen. |
 | Knowledge (`knowledge`) | `WorkspaceSection` opens Skills, Memory, and the existing Settings pages for Default models (`models`) and Model providers (`providers`). Back from those direct entries returns to Knowledge. |
-| More (`more`) | `WorkspaceSection` opens Bots, the local connection status sheet, System (Setup check), and Settings. A Setup check opened from the status sheet returns to the screen that opened that sheet. |
+| More (`more`) | `WorkspaceSection` opens Messaging channels, Bots, the local connection status sheet, System (Setup check), and Settings. A Setup check opened from the status sheet returns to the screen that opened that sheet. Messaging channel details and setup are described in 3.21. |
 
 When an approval is pending outside the chat on a main destination, **Review pending approval** returns to the current chat and its inline approval. Inside a conversation, Android Back still opens Sessions. On Sessions opened via the bar, Back returns to Home. On Sessions opened via Android Back from chat, Back permits Android to exit, as before. Work, Knowledge and More return to Home after their child screen closes. The login and transport flow, draft store and Android notification deep links are shared with the existing chat. `useLockView` subscribes to the native lock-screen state so the navigation bar updates when the assistant enters or leaves it.

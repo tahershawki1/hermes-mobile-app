@@ -1,6 +1,6 @@
 # UI revamp: conversational presence (phase 1)
 
-**State:** First visual-conversation pass implemented on `feature/hermes-lively-presence-2026-11-04`. Review/CI and an actual Android WebView pass are pending. This is deliberately incremental, not a claim that the full redesign is complete.
+**State:** The first visual-conversation pass remains on `feature/hermes-lively-presence-2026-11-04`. A broader mobile UI redesign is now being implemented incrementally on `codex/hermes-chat-review`, starting with shared theme tokens, focus styling and the navigation destinations. The full redesign, review and an actual Android WebView pass are pending.
 
 **Next:** Run the web typecheck, unit tests, browser e2e (including `23-hermes-presence.cjs`) and the full PR CI. Confirm screen reader labels, reduced-motion mode, normal/light themes, long-chat scrolling, stream transitions and battery impact on a real phone. After this passes, iterate on voice expression and meaningful input gestures without timer-based animation.
 

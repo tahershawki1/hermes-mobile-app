@@ -1,0 +1,1 @@
+- **The main navigation now follows Hermes gold.** Its order matches the preview, destination cards and keyboard focus use the shared theme accent in dark and light themes, and full-screen pages use a centered content frame. WhatsApp pairing choices now open the app's own picker. Not yet checked on a physical phone; interface review is in progress.

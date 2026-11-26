@@ -34,9 +34,9 @@ function NavIcon({ name }: { name: Icon }) {
 
 const TABS: { id: MainDestination; icon: Icon; en: string; ar: string; a11y?: string }[] = [
   { id: 'home', icon: 'home', en: 'Home', ar: 'الرئيسية' },
-  { id: 'chats', icon: 'chats', en: 'Sessions', ar: 'الجلسات', a11y: 'Conversations' },
   { id: 'work', icon: 'work', en: 'Work', ar: 'العمل' },
   { id: 'knowledge', icon: 'knowledge', en: 'Knowledge', ar: 'المعرفة' },
+  { id: 'chats', icon: 'chats', en: 'Sessions', ar: 'الجلسات', a11y: 'Conversations' },
   { id: 'more', icon: 'more', en: 'More', ar: 'المزيد' }
 ]
 

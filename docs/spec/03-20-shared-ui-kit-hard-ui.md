@@ -23,7 +23,7 @@
 
 **`useSheetDrag.ts`.** Every bottom sheet (`Sheet`, `PickerSheet`, the session menu, dialogs) uses this hook. A touch that starts within the top 64 px of the sheet (the grip and title strip) drags it down. Releasing after more than 110 px, or faster than 0.5 px/ms with at least 30 px, slides it off and closes it after 160 ms; otherwise it springs back.
 
-**`Screens.tsx` primitives.** `ScreenShell` is the frame of every full screen: top bar with the Back button (`aria-label` "Back", calls `closeScreen()` or the screen's own `onBack`), the title, optional action buttons, then the body. `Sheet` is the tall bottom sheet used by every form (grip, title, content; backdrop tap, grip drag and Android Back close it). `useLoader(load, deps)` runs an async load, keeps `data`, `error`, `loading`, `reload` and `setData`, and reloads when `deps` change. The `timeLimit` helper in `timelimit.ts` sets `LOAD_LIMIT_MS` to 20000 ms; slow requests stop displaying a permanent Loading state and show an error, while late answers may still populate the screen unless superseded by another request. `TimeLimitError` distinguishes that timeout. `LoadError` shows an error and optionally a Try again button. `Status` shows shared states: a retryable error notice, "Loading…" while loading with nothing yet, or nonblank empty-state text.
+**`Screens.tsx` primitives.** `ScreenShell` is the frame of every full screen: a centered top bar and scroll body capped at 760 px, with Back (`aria-label` "Back", calls `closeScreen()` or the screen's own `onBack`), the title, optional action buttons and the page content. `Sheet` is the tall bottom sheet used by every form (grip, title, content; backdrop tap, grip drag and Android Back close it). `useLoader(load, deps)` runs an async load, keeps `data`, `error`, `loading`, `reload` and `setData`, and reloads when `deps` change. The `timeLimit` helper in `timelimit.ts` sets `LOAD_LIMIT_MS` to 20000 ms; slow requests stop displaying a permanent Loading state and show an error, while late answers may still populate the screen unless superseded by another request. `TimeLimitError` distinguishes that timeout. `LoadError` shows an error and optionally a Try again button. `Status` shows shared states: a retryable error notice, "Loading…" while loading with nothing yet, or nonblank empty-state text.
 
 **`Linked.tsx`.** `Linked` renders plain text with web addresses (`http(s)://`, `www.`) and `mailto:` addresses as links (`linkParts` in `web/src/text.ts`) that open through the `openExternal` bridge call, so outside the app in the default browser or mail app (a tap on a link stops the message bubble's own tap). It is used wherever plain text from Hermes or the user is shown: tool cards and reasoning blocks in the chat, user and queued messages, approval and question sheets, subagent cards, diff lines (`DiffView`), text documents in the canvas, gallery and file browser, the scheduled-task prompt, and the error notices of hub screens and the gallery.
 
@@ -32,12 +32,13 @@
 **Hard UI rules (the owner rejected the alternatives):**
 - No native form controls (`<select>`, checkbox, radio, date or time inputs) and no browser `confirm()`, `prompt()` or `alert()`. Use `SelectRow` / `PickerSheet`, `SliderRow`, `Toggle` / `ToggleRow`, `Segmented` from `ui.tsx` and `confirmDialog` / `promptDialog` from `dialog.tsx`. The only native-looking inputs are text fields, the password field for keys and the hidden file input behind the Upload button.
 - All colours come from CSS variables, never hard-coded, because a Light theme exists (`data-theme="light"`).
-- No messaging-channel UI (Telegram and the like). The app is the only front end; the Keys and Advanced settings pages hide those fields.
+- Shared theme accents are `--accent`, `--accent-soft` and `--accent-edge`; keyboard-operable buttons use `--focus-ring`, which follows the theme accent.
+- Messaging channel setup lives in its dedicated Messaging screen; generic Keys and Advanced settings omit channel-managed fields. See 3.21 and [the current channel-scope decision](../decisions/messaging-channels-in-scope.md).
 - Session list gestures stay as in 3.13: swipe right Archive, swipe left Delete with confirm, ⋮ menu, long-press-drag-release reorder with no mode or handles, drag into Pinned.
 - No "update Hermes" button: Hermes updates ship with an app release.
 - Store selectors must never return a fresh `[]` or `{}`; no periodic loop or wake lock without a bound.
 
-**File index for sections 3.13 to 3.20** (bare file names; all under `web/src/`, the screens and sheets in `components/`):
+**File index for sections 3.13 to 3.21** (bare file names; all under `web/src/`, the screens and sheets in `components/`):
 | File | Role |
 |---|---|
 | `Drawer.tsx` | The drawer panel: profile switcher, New chat, tiles, search, hosts the session list |
@@ -64,6 +65,7 @@
 | `SttSettings.tsx` | Settings → Voice → Speech recognition: the phone's recogniser, the on-device model cards and Your own model |
 | `stt.ts` | The on-device model list from the shell (`listSttModels`, `stt-models` events), its actions, `fmtSize`, `chosenSttName`, `testSummary` |
 | `hermes-update.ts` | The phone's Hermes version and its match with the version the app was made for |
+| `Messaging.tsx` | Messaging channel status, credentials, testing, gateway restart and WhatsApp phone/QR pairing |
 | `theme.ts` | The four themes and how they reach the page and Android |
 | `ui.tsx` | Sections, rows, switches, pickers, sliders, segmented control, `Collapse`, `Chevron` |
 | `dialog.tsx` | `confirmDialog`, `promptDialog` and their host |

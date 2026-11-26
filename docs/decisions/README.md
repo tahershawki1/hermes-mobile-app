@@ -5,6 +5,7 @@ to "should I change this?" that already exist; **don't undo one** without asking
 
 - **Before changing a screen or a behaviour, read the decisions that touch it** (file names say the topic).
 - [OpenCode-style inline activity](opencode-inline-activity.md): live progress appears as compact transcript lines, not tool cards.
+- [Messaging channels are in scope](messaging-channels-in-scope.md): the dedicated channel screen supersedes the earlier decision to omit channel UI.
 - **When the owner decides something,** add `docs/decisions/<short-name>.md` in the same PR: a title, **Decided:** (the
   date, or the app version when only that is known), the reason, and **So:** what to do or not do.
 - The spec may repeat a rule next to the screen it shapes; this folder is the source, and the spec links here.
