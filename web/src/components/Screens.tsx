@@ -130,13 +130,79 @@ interface SkillRow {
   provenance?: string
 }
 
+interface SkillCatalogRow {
+  name: string
+  description?: string
+  category?: string
+  identifier: string
+  source?: string
+  installed: boolean
+}
+
+interface SkillActionStatus {
+  name: string
+  running: boolean
+  exit_code: number | null
+  lines: string[]
+}
+
 export function SkillsScreen({ onUse }: { onUse: (text: string) => void }) {
   const profile = useStore(s => s.profile)
-  const { data, error, loading, setData } = useLoader(() => api<SkillRow[]>('GET', '/api/skills'), [profile])
+  const { data, error, loading, setData, reload } = useLoader(() => api<SkillRow[]>('GET', '/api/skills'), [profile])
   const [q, setQ] = useState('')
   const [onlyOn, setOnlyOn] = useState(false)
+  const [tab, setTab] = useState<'installed' | 'available'>('installed')
+  const [catalog, setCatalog] = useState<SkillCatalogRow[]>([])
+  const [catalogLoading, setCatalogLoading] = useState(false)
+  const [catalogError, setCatalogError] = useState('')
+  const [actionName, setActionName] = useState('')
+  const [actionRunning, setActionRunning] = useState(false)
+  const [actionLog, setActionLog] = useState<string[]>([])
   const [open, setOpen] = useState<SkillRow | null>(null)
   const [content, setContent] = useState<string | null>(null)
+
+  const loadCatalog = useCallback(async () => {
+    setCatalogLoading(true)
+    setCatalogError('')
+    try {
+      const result = await api<{ skills: SkillCatalogRow[] }>('GET', '/api/skills/hub/official')
+      setCatalog(result.skills || [])
+    } catch (e) {
+      setCatalogError(errText(e))
+    } finally {
+      setCatalogLoading(false)
+    }
+  }, [profile])
+
+  useEffect(() => { void loadCatalog() }, [loadCatalog])
+
+  useEffect(() => {
+    if (!actionName) return
+    let active = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const poll = async () => {
+      try {
+        const status = await api<SkillActionStatus>('GET', `/api/actions/${encodeURIComponent(actionName)}/status?lines=100`)
+        if (!active) return
+        setActionLog(status.lines || [])
+        setActionRunning(status.running)
+        if (status.running) timer = setTimeout(() => void poll(), 1500)
+        else {
+          if (status.exit_code === 0) toast('Skill installed.', 'info')
+          else toast((status.lines || []).slice(-3).join('\n') || 'Skill installation failed.', 'error')
+          void reload()
+          void loadCatalog()
+        }
+      } catch (e) {
+        if (active) {
+          setActionRunning(false)
+          toast(errText(e), 'error')
+        }
+      }
+    }
+    void poll()
+    return () => { active = false; if (timer) clearTimeout(timer) }
+  }, [actionName, loadCatalog, reload])
 
   const groups = useMemo(() => {
     const needle = q.trim().toLowerCase()
@@ -173,23 +239,44 @@ export function SkillsScreen({ onUse }: { onUse: (text: string) => void }) {
     }
   }
 
+  const install = async (skill: SkillCatalogRow) => {
+    try {
+      const result = await api<{ name: string }>('POST', '/api/skills/hub/install', { identifier: skill.identifier, profile })
+      setActionLog([])
+      setActionRunning(true)
+      setActionName(result.name)
+      toast(`Installing ${skill.name}…`, 'info')
+    } catch (e) {
+      toast(errText(e), 'error')
+    }
+  }
+
   const total = data?.length ?? 0
   const on = (data || []).filter(s => s.enabled).length
+  const needle = q.trim().toLowerCase()
+  const installedRows = (data || []).filter(s =>
+    (!onlyOn || s.enabled) && (!needle || `${s.name} ${s.description || ''} ${s.category || ''}`.toLowerCase().includes(needle)))
+  const availableRows = catalog.filter(s => !s.installed &&
+    (!needle || `${s.name} ${s.description || ''} ${s.category || ''}`.toLowerCase().includes(needle)))
   return (
-    <ScreenShell title={`Skills ${total ? `· ${on}/${total} on` : ''}`}>
+    <ScreenShell title={`Knowledge · Skills ${total ? `· ${on}/${total} on` : ''}`}>
       <div className="screen-tools">
         <input className="search" placeholder="Search skills…" value={q} onChange={e => setQ(e.target.value)} />
-        <button className={`pill${onlyOn ? ' on' : ''}`} onClick={() => setOnlyOn(v => !v)}>
-          Enabled
-        </button>
+        <div className="hm-skill-tabs" role="group" aria-label="Skill lists">
+          <button className={`pill${tab === 'installed' ? ' on' : ''}`} onClick={() => setTab('installed')}>Installed ({total})</button>
+          <button className={`pill${tab === 'available' ? ' on' : ''}`} onClick={() => setTab('available')}>Available</button>
+        </div>
+        {tab === 'installed' && <button className={`pill${onlyOn ? ' on' : ''}`} onClick={() => setOnlyOn(v => !v)}>Enabled</button>}
       </div>
-      <Status loading={loading} error={error} empty={!data?.length} emptyText="No skills" />
-      {groups.map(([cat, rows]) => (
+      {tab === 'installed' && <>
+        <Status loading={loading} error={error} empty={!data?.length} emptyText="No installed skills" />
+        {installedRows.length === 0 && data?.length ? <div className="dim pad">No matching installed skills</div> : null}
+        {groups.filter(([_, rows]) => rows.some(s => installedRows.includes(s))).map(([cat, rows]) => (
         <div key={cat} className="group">
           <div className="group-title">
             {cat} <span className="dim">({rows.length})</span>
           </div>
-          {rows.map(s => (
+          {rows.filter(s => installedRows.includes(s)).map(s => (
             <div key={s.name} className="list-row">
               <button className="list-main" onClick={() => void view(s)}>
                 <span className="list-title">{s.name}</span>
@@ -201,7 +288,30 @@ export function SkillsScreen({ onUse }: { onUse: (text: string) => void }) {
             </div>
           ))}
         </div>
-      ))}
+        ))}
+      </>}
+      {tab === 'available' && <>
+        <div className="dim small pad">Optional official skills you can add to this profile.</div>
+        {catalogError && <LoadError error={catalogError} onRetry={() => void loadCatalog()} />}
+        {catalogLoading && !catalog.length && <div className="dim pad">Loading available skills…</div>}
+        {!catalogLoading && !catalogError && availableRows.length === 0 && <div className="dim pad">No available skills match this search.</div>}
+        {Object.entries(availableRows.reduce<Record<string, SkillCatalogRow[]>>((out, skill) => {
+          (out[skill.category || 'general'] ||= []).push(skill)
+          return out
+        }, {})).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => (
+          <div key={cat} className="group">
+            <div className="group-title">{cat} <span className="dim">({rows.length})</span></div>
+            {rows.map(skill => <div key={skill.identifier} className="list-row">
+              <div className="list-main">
+                <span className="list-title">{skill.name}</span>
+                <span className="list-sub">{skill.description}</span>
+              </div>
+              <button className="btn primary" disabled={actionRunning} onClick={() => void install(skill)}>{actionRunning ? 'Installing…' : 'Install'}</button>
+            </div>)}
+          </div>
+        ))}
+        {actionRunning && <div className="hm-skill-action" role="status"><strong>Installing skill…</strong>{actionLog.slice(-4).map((line, i) => <div key={`${i}-${line}`}>{line}</div>)}</div>}
+      </>}
       {open && (
         <Sheet title={open.name} onClose={() => setOpen(null)}>
           <div className="dim small">
