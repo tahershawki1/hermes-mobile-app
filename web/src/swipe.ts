@@ -26,7 +26,7 @@ const SKIP = '.scrubber,.html-viewer,.inline-frame,input,textarea,select,[conten
 // anything covering the chat still do.
 const EDGE = 24
 // A swipe left that starts here closes the open drawer. Not on the chat rows: they swipe themselves (archive / delete).
-const CLOSE_SKIP = '.drag-item,input,textarea,[contenteditable],[role=dialog],.slider'
+const CLOSE_SKIP = 'input,textarea,[contenteditable],[role=dialog],.slider'
 
 const EDGE_SKIP = 'input,textarea,select,[contenteditable],[role=dialog],.sheet-backdrop,.canvas-panel,.drawer,.drawer-backdrop,.lightbox,.tts-player'
 
@@ -79,7 +79,10 @@ export function installSwipeToDrawer(): () => void {
     const dy = e.touches[0].clientY - start.y
     // The drawer takes the finger as soon as the move is clearly sideways, measured from where the touch began.
     if (start.closing) {
-      if (dx < -10 && -dx > Math.abs(dy) * 1.5) {
+      if (dx < -50 && -dx > Math.abs(dy) * 1.5) {
+        // A long left swipe in a session row belongs to closing the drawer; short row swipes
+        // remain available for archive/delete. Prevent the touch from also completing the row swipe.
+        e.preventDefault()
         drawerDragStart(start.x, true)
         drawerDragTo(e.touches[0].clientX)
         start = null
@@ -110,7 +113,7 @@ export function installSwipeToDrawer(): () => void {
     start = edge = null
   }
   document.addEventListener('touchstart', down, { passive: true })
-  document.addEventListener('touchmove', move, { passive: true })
+  document.addEventListener('touchmove', move, { passive: false })
   document.addEventListener('touchend', end, { passive: true })
   document.addEventListener('touchcancel', cancel, { passive: true })
   return () => {

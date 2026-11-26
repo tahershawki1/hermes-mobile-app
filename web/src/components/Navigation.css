@@ -1,16 +1,16 @@
 :root {
   --hm-nav-height: 58px;
   --hm-approval-height: 38px;
-  --hm-nav-tint: #31263d;
-  --hm-nav-accent: #e1baf2;
-  --hm-home-card: #242032;
-  --hm-home-edge: #40344e;
+  --hm-nav-tint: #1d2d43;
+  --hm-nav-accent: #91bfff;
+  --hm-home-card: #1b2635;
+  --hm-home-edge: #344860;
 }
 :root[data-theme='light'] {
-  --hm-nav-tint: #eee1f1;
-  --hm-nav-accent: #603669;
-  --hm-home-card: #f6edf7;
-  --hm-home-edge: #e4d4e9;
+  --hm-nav-tint: #e4efff;
+  --hm-nav-accent: #245a9f;
+  --hm-home-card: #f0f6ff;
+  --hm-home-edge: #d1e1f7;
 }
 
 .app.hm-has-nav {
