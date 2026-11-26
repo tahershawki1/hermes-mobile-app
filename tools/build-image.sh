@@ -35,6 +35,8 @@ if [ "${1:-}" = --inside ]; then
   apt_line=$(sed -n 's/^deb "\(export DEBIAN_FRONTEND=noninteractive; apt-get update .*\)"$/\1/p' "$BOOT")
   inst=$(sed -n 's/^ *hermes_install() { deb "\(curl [^"]*\)"; }.*/\1/p' "$BOOT")
   [ -n "$libs" ] && [ -n "$apt_line" ] && [ -n "$inst" ] || { echo "build-image: bootstrap.sh changed shape (CHROMIUM_LIBS / apt line / hermes_install not found)"; exit 1; }
+  HERMES_REPO=$(sed -n 's/^HERMES_REPO=\(.*\)$/\1/p' "$BOOT")
+  [ -n "$HERMES_REPO" ] || { echo "build-image: bootstrap.sh has no HERMES_REPO" >&2; exit 1; }
   CHROMIUM_LIBS=$libs HERMES_COMMIT=$pin
   apt_line=$(eval "echo \"$apt_line\"")   # expands $CHROMIUM_LIBS like bootstrap.sh's double quotes do
   inst=$(eval "echo \"$inst\"")           # expands $HERMES_COMMIT

@@ -4,6 +4,7 @@ import { setState, useStore, type Screen } from '../store'
 import { SessionList } from './SessionList'
 import { haptic } from '../bridge'
 import { setSideHidden } from '../sidepanel'
+import { openDestination } from '../navigation'
 
 // Skills, memory, cron, files and projects live on the Hermes hub (one tile, more room for chats).
 const NAV: [Exclude<Screen, null>, string, string][] = [
@@ -64,7 +65,7 @@ export function Drawer() {
               </button>
             </div>
           )}
-          <button className="btn primary block" onClick={() => startDraft()}>
+          <button className="btn primary block" onClick={() => { startDraft(); openDestination(null) }}>
             ＋ New chat
           </button>
           <div className="nav-grid">
@@ -78,7 +79,7 @@ export function Drawer() {
           <input className="search" placeholder="Search sessions…" value={q} onChange={e => setQ(e.target.value)} />
         </div>
         <div className="drawer-list">
-          <SessionList query={q} />
+          <SessionList query={q} onSelect={() => openDestination(null)} />
         </div>
       </aside>
     </>

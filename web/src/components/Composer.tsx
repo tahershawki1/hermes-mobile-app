@@ -2,7 +2,7 @@ import { useTextDirection } from '../text-direction'
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { bargeInAvailable, fmtPause, getLivePause, interruptLive, liveAvailable, setLiveMute, startLive, stopLive } from '../live'
 import { startListening, stopListening, useVoice, voiceErrorText, voiceInputAvailable } from '../voice'
-import { afterChatOpens, attachFile, clearAttachments, composerPrefill, detachAttachment, errText, interrupt, queueMessage, sendPrompt, startDraft, unqueueMessage } from '../gateway'
+import { afterChatOpens, attachFile, clearAttachments, composerPrefill, detachAttachment, errText, interrupt, queueMessage, sendPrompt, unqueueMessage } from '../gateway'
 import { getState, setState, toast, useStore, type Attachment } from '../store'
 import { haptic } from '../bridge'
 import { matchCommands, refreshCommands, useCommandCatalog, type CommandEntry } from '../commands'
@@ -18,7 +18,6 @@ import { AutoButton } from './AutoAccess'
 import { ago } from '../unread'
 import { QUEUE_MAX, enqueue, useQueue } from '../queue'
 import { clearQuotes, removeQuote, setQuotes, useQuotes, withQuotes } from '../quote'
-import { validateCadFile } from '../cad'
 
 const EMPTY: Attachment[] = []
 
@@ -43,11 +42,6 @@ const ATTACH_OPTIONS: Option[] = [
 ]
 
 const EFFORT_SHORT: Record<string, string> = { medium: 'med', minimal: 'min', none: 'off' }
-const CAD_PROMPT = 'CAD Tools: افتح مساحة عمل AutoCAD. افحص ملف DWG أو DXF المرفق، حدّد نوع الرسم والوحدات والطبقات، ثم اقترح العملية المطلوبة قبل أي تعديل أو تصدير.'
-const CAD_ATTACH_OPTION: Option = {
-  value: 'cad', label: 'CAD drawing', sub: 'DWG or DXF (validated before upload)', tone: 'gold',
-  icon: line('M4 19V5h16v14H4zM8 15l2-3 2 2 2-4 2 5M7 8h.01')
-}
 
 
 export function Composer({ injected, onInjected }: { injected: string | null; onInjected: () => void }) {
@@ -87,7 +81,6 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
   const photoInput = useRef<HTMLInputElement>(null)
   const cameraInput = useRef<HTMLInputElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
-  const cadInput = useRef<HTMLInputElement>(null)
   const [attachMenu, setAttachMenu] = useState(false)
   const [stashMenu, setStashMenu] = useState(false)
   const [attaching, setAttaching] = useState(0)
@@ -277,15 +270,10 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
 
   const queued = useStore(s => s.queued)
 
-  const addFiles = async (files: File[], cad = false) => {
+  const addFiles = async (files: File[]) => {
     setAttaching(n => n + files.length)
     for (const f of files) {
       try {
-        if (cad) {
-          const check = validateCadFile(f.name, new Uint8Array(await f.arrayBuffer()))
-          if (!check.ok) throw new Error(`${f.name}: ${check.reason}`)
-          setState({ screen: 'cad' })
-        }
         await attachFile(f)
       } catch (err) {
         toast(errText(err), 'error')
@@ -300,7 +288,7 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
   }
 
   return (
-    <div className="composer-wrap">
+    <div className="composer-wrap hm-chat-composer">
       {queued && (
         <div className="queued-chip">
           <span className="queued-text">⏳ Sends when Hermes is back: {queued.text.length > 80 ? queued.text.slice(0, 78) + '…' : queued.text}{queued.atts?.length ? ` (📎 ${queued.atts.length} attached)` : ''}</span>
@@ -436,33 +424,6 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
           <ContextRing />
         </div>
       )}
-      {live === 'off' && fresh && !showMenu && (
-        <div className="cad-tools-launcher" aria-label="CAD Tools">
-          <button
-            type="button"
-            className="cad-tools-button"
-            onClick={() => {
-              haptic()
-              startDraft()
-              setState({ screen: 'cad' })
-              requestAnimationFrame(() => composerPrefill.set(CAD_PROMPT))
-            }}
-          >
-            <span aria-hidden="true">⌘</span>
-            CAD Tools
-          </button>
-          <button
-            type="button"
-            className="cad-tools-file-button"
-            onClick={() => {
-              haptic()
-              cadInput.current?.click()
-            }}
-          >
-            Open AutoCAD file
-          </button>
-        </div>
-      )}
       <div className={`composer${live !== 'off' ? ' composer-hidden' : ''}`}>
         <button className="icon-btn" aria-label="Add" onClick={() => { haptic(); setAttachMenu(true) }} disabled={offline}>
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -504,18 +465,6 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
             void addFiles(files)
           }}
         />
-        <input
-          ref={cadInput}
-          type="file"
-          accept=".dwg,.dxf"
-          multiple
-          hidden
-          onChange={e => {
-            const files = Array.from(e.target.files || [])
-            e.target.value = ''
-            void addFiles(files, true)
-          }}
-        />
         {stashMenu && (
           <PickerSheet
             title="Stashed drafts"
@@ -544,13 +493,12 @@ export function Composer({ injected, onInjected }: { injected: string | null; on
                 tone: 'teal',
                 icon: line('M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z')
               },
-              CAD_ATTACH_OPTION,
               ...ATTACH_OPTIONS,
               ...(text.trim() ? [{ value: 'stash', label: 'Stash draft', sub: 'Put this text aside and clear the box', tone: 'gray' as const, icon: line('M4 8h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM3 4h18v4H3zM12 11v5M9.5 13.5L12 16l2.5-2.5') }] : []),
               ...(stashList.length ? [{ value: 'stashes', label: `Stashed drafts (${stashList.length})`, sub: stashList[0].text.trim().slice(0, 50), tone: 'gray' as const, icon: line('M12 3l9 4.5-9 4.5-9-4.5zM3 12l9 4.5 9-4.5M3 16.5L12 21l9-4.5') }] : [])
             ]}
             value=""
-            onPick={v => (v === 'model' ? setState({ sheet: 'model' }) : v === 'stash' ? stashDraft() : v === 'stashes' ? setStashMenu(true) : (v === 'camera' ? cameraInput : v === 'photo' ? photoInput : v === 'cad' ? cadInput : fileInput).current?.click())}
+            onPick={v => (v === 'model' ? setState({ sheet: 'model' }) : v === 'stash' ? stashDraft() : v === 'stashes' ? setStashMenu(true) : (v === 'camera' ? cameraInput : v === 'photo' ? photoInput : fileInput).current?.click())}
             onClose={() => setAttachMenu(false)}
           />
         )}

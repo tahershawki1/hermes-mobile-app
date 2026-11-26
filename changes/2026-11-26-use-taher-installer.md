@@ -1,0 +1,1 @@
+- **Set up Hermes from the Taher repositories.** The app copies the fork's setup command, and rerunning it checks which engine source and version are installed. Preview APKs use the setup files from their own commit. Phone verification is pending.

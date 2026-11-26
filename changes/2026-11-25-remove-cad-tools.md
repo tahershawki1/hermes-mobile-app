@@ -1,0 +1,1 @@
+- **Remove the drawing workspace.** The chat composer returns to its standard photo and file attachments, and the drawing editor and its libraries are removed. Android phone review is pending.

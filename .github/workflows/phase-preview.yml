@@ -1,0 +1,70 @@
+name: Build phase review APK
+
+on:
+  pull_request:
+    branches: [integration/hermes-go-parity]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Android review APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      OPENUI_TELEMETRY_DISABLED: '1'
+      DO_NOT_TRACK: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install Android SDK packages
+        run: |
+          if [ -f "$ANDROID_HOME/platforms/android-36/android.jar" ] && [ -x "$ANDROID_HOME/build-tools/35.0.0/aapt2" ]; then exit 0; fi
+          manager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$manager" ]; then
+            curl -fLsS --retry 2 https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -o "$RUNNER_TEMP/sdk-tools.zip"
+            unzip -q "$RUNNER_TEMP/sdk-tools.zip" -d "$RUNNER_TEMP/sdk-tools"
+            manager="$RUNNER_TEMP/sdk-tools/cmdline-tools/bin/sdkmanager"
+          fi
+          set +o pipefail
+          yes | "$manager" --sdk_root="$ANDROID_HOME" --licenses >/dev/null
+          set -o pipefail
+          "$manager" --sdk_root="$ANDROID_HOME" 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Build WebView UI
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+      - name: Build and verify test variant
+        run: |
+          mkdir -p "$HOME/.android"
+          HM_APP_VARIANT=taher-test HM_BOOTSTRAP_REF="$(git rev-parse HEAD)" HM_SKIP_WEB_BUILD=1 VERSION_NAME="review-${GITHUB_RUN_NUMBER}" VERSION_CODE="$GITHUB_RUN_NUMBER" android/build.sh
+          mkdir -p review
+          cp android/build/hermes-mobile.apk review/Hermes-Taher-Preview.apk
+          git rev-parse HEAD > review/commit.txt
+          cd review
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify Hermes-Taher-Preview.apk
+          sha256sum Hermes-Taher-Preview.apk > Hermes-Taher-Preview.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Hermes-Taher-Preview-${{ github.event.pull_request.head.sha }}
+          path: review/
+          if-no-files-found: error
+          retention-days: 14

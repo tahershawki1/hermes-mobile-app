@@ -15,6 +15,9 @@ import { SCRUB_MIN, railPosition, readLine, userMarks } from './scrub'
 import { TtsPlayer } from './components/TtsPlayer'
 import { Drawer } from './components/Drawer'
 import { ChatHome } from './components/ChatHome'
+import { PrimaryNavigation, WorkspaceHome, WorkspaceSection } from './components/Navigation'
+import { isMainDestination } from './navigation'
+import { useLockView } from './lockview'
 import { InlineApproval, RequestSheet } from './components/RequestSheet'
 import { ChatMenuSheet, CommandsSheet, DraftMenuSheet, GoalSheet, ModelSheet, ContextSheet, RollbackSheet, SessionActionsSheet, StatusSheet, useCompress } from './components/Sheets'
 import { bannerItems, startActivityPolling } from './activity'
@@ -45,7 +48,6 @@ import { refreshBg } from './bgapp'
 import { bootMark } from './boot'
 import { UninstallResume } from './components/Uninstall'
 import { toggleSide, useSidePanel } from './sidepanel'
-import { CadWorkspace } from './components/CadWorkspace'
 
 declare global {
   interface Window {
@@ -69,7 +71,7 @@ window.hermesBack = () => {
     return true
   }
   if (s.screen) {
-    if (s.screen === 'chats') return false // Android may leave the app only from its home screen
+    if (s.screen === 'home' || (s.screen === 'chats' && !s.screenBack)) return false
     closeScreen()
     return true
   }
@@ -865,6 +867,11 @@ export function App() {
   const screen = useStore(s => s.screen)
   const screenKey = useStore(s => s.screenProfile) || '-'
   const request = useStore(s => s.requests[0])
+  const drawer = useStore(s => s.drawer)
+  const canvasOpen = useCanvas(c => c.open)
+  const locked = useLockView()
+  const showNavigation = !locked && !drawer && (!canvasOpen || screen !== null) && (screen === null || isMainDestination(screen))
+  const showApprovalLink = showNavigation && request?.method === 'approval' && screen !== null
   const toasts = useStore(s => s.toasts)
   const scale = useStore(s => s.textScale)
   const [injected, setInjected] = useState<string | null>(null)
@@ -906,7 +913,7 @@ export function App() {
   }, [scale])
 
   return (
-    <div className="app">
+    <div className={`app${showNavigation ? ' hm-has-nav' : ''}${showApprovalLink ? ' hm-has-approval-link' : ''}`}>
       <DevtoolsStrip />
       <Header />
       <ConnBanner />
@@ -919,7 +926,6 @@ export function App() {
       <BgApp />
       {request?.method === 'approval' && <InlineApproval key={request.id} req={request} />}
       <Composer injected={injected} onInjected={clearInjected} />
-      {screen === 'cad' && <CadWorkspace />}
       {screen === 'skills' && <SkillsScreen onUse={t => setInjected(t)} />}
       {screen === 'memory' && <MemoryScreen />}
       {screen === 'cron' && <CronScreen />}
@@ -932,6 +938,11 @@ export function App() {
       {screen === 'welcome' && <SetupFlow />}
       {screen === 'hub' && <HubScreen />}
       {screen === 'chats' && <ChatHome />}
+      {screen === 'home' && <WorkspaceHome />}
+      {(screen === 'work' || screen === 'knowledge' || screen === 'more') && <WorkspaceSection key={screen} screen={screen} />}
+      {screen === 'models' && <SettingsScreen key="models" entry="models" />}
+      {screen === 'providers' && <SettingsScreen key="providers" entry="accounts" />}
+      {showNavigation && <PrimaryNavigation screen={screen} approval={Boolean(showApprovalLink)} />}
       <Drawer />
       {sheet === 'model' && <ModelSheet />}
       {sheet === 'commands' && (

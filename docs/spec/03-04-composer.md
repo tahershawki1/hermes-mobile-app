@@ -121,3 +121,5 @@ Launcher shortcuts call `window.hermesShortcut(kind)`: New chat, or `live` which
 ---
 
 Attachment-only sends preserve an empty visible caption. A document submits its `@file:` reference; images use the transport instruction "Please review the attached images." so Hermes receives a nonempty prompt with its queued images.
+
+`hm-chat-composer` outlines the input row as a separate group above the app navigation. The Add and Commands controls remain beside the input. Model, Auto and Context remain in the model row immediately above it. The Add menu handles photos, the camera and ordinary file attachments.

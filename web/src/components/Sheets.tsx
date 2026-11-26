@@ -1,3 +1,4 @@
+import { openDestination } from '../navigation'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import type { CommandsCatalogResult, GoalSnapshot, ModelOptionsResult } from '@hermes/shared/gateway-contract.generated'
 import { canRestoreFile, checkpointDiff, folderLabel, hunksOnly, listCheckpoints, reasonLabel, restoreCheckpoint, restoreLines, restoreSummary, type CheckpointFolder, type DiffFile, type Snapshot } from '../checkpoints'
@@ -8,7 +9,7 @@ import { confirmDialog } from '../dialog'
 import { Title, keepBranch, plainTitle } from './Title'
 import { autoReadFor, hasChatOverride, setAutoReadFor, setDraftRead, useAutoRead, useDraftAutoRead } from '../voice'
 import { checkHealth, dotState, type Health } from '../health'
-import { setState, toast, useStore } from '../store'
+import { getState, setState, toast, useStore } from '../store'
 import { copyText, haptic, setupFix, setupState, shareText } from '../bridge'
 import { api } from '../api'
 import { shizukuRow } from '../statusrows'
@@ -553,7 +554,7 @@ export function StatusSheet() {
               shRow.fix === 'open-shizuku'
                 ? () => setupFix('open-shizuku')
                 : shRow.fix === 'setup'
-                  ? () => setState({ sheet: null, screen: 'setup' })
+                  ? () => openDestination('setup', getState().screen)
                   : undefined
             }
           />
@@ -572,7 +573,7 @@ export function StatusSheet() {
           >
             Reconnect / start Hermes
           </button>
-          <button className="btn" onClick={() => setState({ sheet: null, screen: 'setup' })}>
+          <button className="btn" onClick={() => openDestination('setup', getState().screen)}>
             Setup check
           </button>
         </div>
