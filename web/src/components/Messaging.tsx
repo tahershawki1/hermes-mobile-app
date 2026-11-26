@@ -20,7 +20,7 @@ type MessagingField = {
 }
 type WhatsAppSetupState = {
   pairing_id: string
-  status: 'starting' | 'waiting' | 'connected' | 'error' | 'expired' | 'cancelled'
+  status: 'installing' | 'starting' | 'waiting' | 'connected' | 'error' | 'expired' | 'cancelled'
   qr_payload?: string | null
   pairing_code?: string | null
   expires_at?: string
@@ -100,7 +100,7 @@ export function MessagingScreen() {
 
   useEffect(() => {
     const session = whatsapp
-    if (!session || !['starting', 'waiting'].includes(session.status)) return
+    if (!session || !['installing', 'starting', 'waiting'].includes(session.status)) return
     let active = true
     let timer: number | undefined
     const poll = async () => {
@@ -109,7 +109,7 @@ export function MessagingScreen() {
         if (!active) return
         setWhatsApp(state)
         if (state.account_phone) setLinkedPhone(state.account_phone)
-        if (['starting', 'waiting'].includes(state.status)) timer = window.setTimeout(() => void poll(), 1200)
+        if (['installing', 'starting', 'waiting'].includes(state.status)) timer = window.setTimeout(() => void poll(), 1200)
       } catch (e) {
         if (active) setWhatsApp(current => current ? { ...current, status: 'error', error: e instanceof Error ? e.message : String(e) } : current)
       }
@@ -343,6 +343,7 @@ export function MessagingScreen() {
                   {whatsapp && <div className="hm-whatsapp-pairing" role="status">
                     {whatsapp.status === 'waiting' && whatsapp.pairing_code && <div className="hm-whatsapp-code" dir="ltr" aria-label={navigationText('WhatsApp pairing code', 'رمز ربط واتساب')}>{whatsapp.pairing_code}</div>}
                     {whatsapp.status === 'waiting' && whatsapp.pairing_method === 'qr' && whatsappQrImage && <img className="hm-whatsapp-qr" src={whatsappQrImage} alt={navigationText('WhatsApp linking QR code', 'رمز QR لربط واتساب')} />}
+                    {whatsapp.status === 'installing' && <p>{navigationText('Preparing the WhatsApp bridge. The first setup can take a little longer.', 'جارٍ تجهيز جسر واتساب. قد يستغرق الإعداد الأول بعض الوقت.')}</p>}
                     {whatsapp.status === 'starting' && <p>{whatsapp.pairing_method === 'qr' ? navigationText('Connecting to WhatsApp and preparing a QR code…', 'جارٍ الاتصال بواتساب وتجهيز رمز QR…') : navigationText('Asking the Hermes engine for a link code…', 'جارٍ طلب رمز الربط من محرك هيرمس…')}</p>}
                     {whatsapp.status === 'waiting' && whatsapp.pairing_code && <p>{navigationText('In WhatsApp, open Linked devices → Link a device → Link with phone number instead, then enter this code.', 'في واتساب افتح الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف بدلاً من ذلك، ثم أدخل هذا الرمز.')}</p>}
                     {whatsapp.status === 'waiting' && whatsapp.pairing_method === 'qr' && !whatsapp.qr_payload && <p>{navigationText('Waiting for the QR code from the Hermes engine…', 'بانتظار رمز QR من محرك هيرمس…')}</p>}
