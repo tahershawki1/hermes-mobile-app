@@ -58,8 +58,8 @@ if [ -n "${HM_TEST_BOOTSTRAP_URL:-}" ]; then
 fi
 # Phase preview: keep the bootstrap and its companion scripts on the APK's source commit.
 if [ -n "${HM_BOOTSTRAP_REF:-}" ]; then
-  [[ "${HM_APP_VARIANT:-}" == taher-test && "$HM_BOOTSTRAP_REF" =~ ^[0-9a-f]{40}$ ]] || {
-    echo "HM_BOOTSTRAP_REF requires the preview variant and a full commit SHA" >&2; exit 1;
+  [[ "${HM_APP_VARIANT:-}" == taher-test || "${HM_APP_VARIANT:-}" == taher-preview ]] && [[ "$HM_BOOTSTRAP_REF" =~ ^[0-9a-f]{40}$ ]] || {
+    echo "HM_BOOTSTRAP_REF requires a preview variant and a full commit SHA" >&2; exit 1;
   }
   mkdir -p build/res-bootstrap/values
   printf '<resources><string name="hm_bootstrap_ref" translatable="false">%s</string></resources>\n' "$HM_BOOTSTRAP_REF" > build/res-bootstrap/values/bootstrap.xml
@@ -78,7 +78,7 @@ fi
 # Independent fork variant: keep original Java package, rename installed app ID.
 MANIFEST=AndroidManifest.xml
 RENAME_ARGS=()
-if [ "${HM_APP_VARIANT:-}" = "taher" ] || [ "${HM_APP_VARIANT:-}" = "taher-test" ]; then
+if [ "${HM_APP_VARIANT:-}" = "taher" ] || [ "${HM_APP_VARIANT:-}" = "taher-test" ] || [ "${HM_APP_VARIANT:-}" = "taher-preview" ]; then
   MANIFEST=build/AndroidManifest.taher.xml
   python3 - "$MANIFEST" <<'PY'
 from pathlib import Path
@@ -94,6 +94,9 @@ PY
   if [ "${HM_APP_VARIANT:-}" = "taher-test" ]; then
     sed -i "s/com.tahershawki.hermesmobile.camera/com.tahershawki.hermesmobile.test.camera/g; s/com.tahershawki.hermesmobile.shizuku/com.tahershawki.hermesmobile.test.shizuku/g; s/android:label=\"Hermes Taher\"/android:label=\"Hermes Taher Preview\"/g" "$MANIFEST"
     RENAME_ARGS=(--rename-manifest-package com.tahershawki.hermesmobile.test)
+  elif [ "${HM_APP_VARIANT:-}" = "taher-preview" ]; then
+    sed -i "s/com.tahershawki.hermesmobile.camera/com.tahershawki.hermesmobile.preview.camera/g; s/com.tahershawki.hermesmobile.shizuku/com.tahershawki.hermesmobile.preview.shizuku/g; s/android:label=\"Hermes Taher\"/android:label=\"Hermes Taher Preview\"/g" "$MANIFEST"
+    RENAME_ARGS=(--rename-manifest-package com.tahershawki.hermesmobile.preview)
   else
     RENAME_ARGS=(--rename-manifest-package com.tahershawki.hermesmobile)
   fi
